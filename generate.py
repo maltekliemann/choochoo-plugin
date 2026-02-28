@@ -226,15 +226,15 @@ def process_skill(name: str, backend: str, cfg: dict) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text)
 
-    # 8. Copy co-located references
-    skill_refs = SOURCE / "skills" / name / "references"
-    if skill_refs.exists():
-        copy_references(skill_refs, out_path.parent)
-
-    # 9. Copy general references (shared across all skills)
+    # 8. Copy general references (shared across all skills)
     general_refs = SOURCE / "references"
     if general_refs.exists():
         copy_references(general_refs, out_path.parent)
+
+    # 9. Copy skill-specific references (override general on name collision)
+    skill_refs = SOURCE / "skills" / name / "references"
+    if skill_refs.exists():
+        copy_references(skill_refs, out_path.parent)
 
     print(f"  {backend:8s} → {out_path.relative_to(ROOT)}")
 

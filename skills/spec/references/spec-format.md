@@ -25,8 +25,8 @@ title: User Authentication System
 created: 2025-01-15
 poured: []
 iteration: 1
-auto_discovery: true
-auto_learnings: true
+auto_discovery: false
+auto_learnings: false
 ---
 ```
 
@@ -36,8 +36,8 @@ auto_learnings: true
 | `created` | No | Current date | When the spec was created |
 | `poured` | No | `[]` | Array of task IDs that have been poured to beads |
 | `iteration` | No | `1` | Increments each time `/spec` processes feedback |
-| `auto_discovery` | No | `true` | Whether to scan codebase for patterns |
-| `auto_learnings` | No | `true` | Whether to incorporate learnings from previous tasks |
+| `auto_discovery` | No | `false` | Whether to scan codebase for patterns |
+| `auto_learnings` | No | `false` | Whether to incorporate learnings from previous tasks |
 
 ### XML Structure
 

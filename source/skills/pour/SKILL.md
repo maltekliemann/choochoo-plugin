@@ -7,7 +7,7 @@
 
 <arguments>
   target_tasks = $1  <!-- Optional: target number of implementation tasks -->
-  spec_file = $2     <!-- Optional: spec file name or path to pour from -->
+  spec_name = $2     <!-- Optional: spec file name or path to pour from -->
   formula = $3       <!-- Optional: formula name to use (default: auto-detect) -->
 </arguments>
 
@@ -18,7 +18,7 @@ Create beads from ready tasks in a spec file, or directly from conversation cont
 
 ## Load reference first
 
-Read `references/acceptance-dsl.md` before generating acceptance criteria.
+Read `references/acceptance-criteria.md` before generating acceptance criteria.
 
 ## Inputs
 
@@ -93,12 +93,12 @@ Question: "How would you like to pour these tasks?"
 Header: "Workflow"
 
 Options:
-- Use workflow formula (Recommended) - Multi-step workflow with structured phases like health checks, implementation, and verification. The runner handles git commits and beads lifecycle. Best for production features.
+- Use workflow formula (Recommended) - Multi-step workflow with structured phases (design, implement, review, test, submit). The runner handles git commits and beads lifecycle. Best for production features.
 - Create singular tasks - Simple beads executed directly. Good for exploratory work, research, prototyping, or one-off tasks.
 ```
 <!-- END:claude,cursor -->
 <!-- BEGIN:codex -->
-- **Use workflow formula (Recommended)** - Multi-step workflow with structured phases (bearings, implement, verify). The runner handles git commits and beads lifecycle. Best for production features.
+- **Use workflow formula (Recommended)** - Multi-step workflow with structured phases (design, implement, review, test, submit). The runner handles git commits and beads lifecycle. Best for production features.
 - **Create singular tasks** - Simple beads executed directly. Good for exploratory work, research, prototyping, or one-off tasks.
 <!-- END:codex -->
 
@@ -123,7 +123,7 @@ Options:
 
 1. **Spec tasks** = High-level features/capabilities from the spec
 2. **Implementation tasks** = Granular, atomic units of work (molecules)
-3. **Formula steps** = Workflow phases within each task (bearings, implement, verify) - these are NOT counted toward task granularity. Note: the runner handles git commits and beads lifecycle automatically.
+3. **Formula steps** = Workflow phases within each task (design, implement, review, test, submit) - these are NOT counted toward task granularity. Note: the runner handles git commits and beads lifecycle automatically.
 
 <!-- BEGIN:claude,cursor -->
 **Example:**
@@ -131,7 +131,7 @@ Options:
 - Spec has 10 high-level tasks
 - Each spec task breaks down into 5-10 implementation tasks
 - Target: 50-100 implementation tasks (molecules)
-- Formula steps (3-5 per molecule) are internal workflow, NOT part of task count
+- Formula steps (5 per molecule) are internal workflow, NOT part of task count
 
 <!-- END:claude,cursor -->
 ### Target Implementation Tasks
@@ -187,11 +187,11 @@ Each implementation task (molecule) should be a **coherent slice of work**:
 <!-- END:claude,cursor -->
 ## Acceptance Criteria Generation
 
-When pouring spec tasks into beads, **generate acceptance criteria** for each bead using the verification DSL. These are set on the root bead via `bd update --acceptance` and are executed by the runner after the agent finishes.
+When pouring spec tasks into beads, **generate acceptance criteria** for each bead. These are set on the root bead via `bd update --acceptance` and are executed by the runner after the agent finishes.
 
 <!-- BEGIN:claude,cursor -->
 - **Spec-level test steps** = Integration guidance (kept for reference in the spec)
-- **Bead acceptance criteria** = Machine-checkable DSL checks set on the root bead
+- **Bead acceptance criteria** = Machine-checkable shell commands set on the root bead
 
 <!-- END:claude,cursor -->
 ### Acceptance Criteria Complexity<!-- BEGIN:claude,cursor --> (Important)<!-- END:claude,cursor -->
@@ -210,39 +210,33 @@ Use a **mix of complexity** based on the task:
 For each bead, generate acceptance criteria that:
 
 1. Are specific to what this bead implements
-2. Use DSL check types (`bash`, `file_exists`, `file_not_exists`)
+2. Are shell commands (each line runs via `sh -c`)
 3. Are machine-executable (no natural language)
 4. Match complexity to task importance
 
 <!-- END:claude,cursor -->
-### Verification DSL Format (REQUIRED for acceptance criteria)
+### Acceptance Criteria Format (REQUIRED)
 
 <!-- BEGIN:claude,cursor -->
-Write acceptance criteria using the runner's verification DSL. The runner executes these checks automatically after the agent finishes — if any check fails, the runner retries or blocks the task.
+Write acceptance criteria as plain shell commands. The runner executes each line via `sh -c` after the agent finishes — if any command exits non-zero, the runner retries or blocks the task.
 
 <!-- END:claude,cursor -->
-Available check types:
-
-- `bash: <command>` — Run a shell command; passes if exit code is 0
-- `file_exists: <path>` — Check that a file exists at the given path
-- `file_not_exists: <path>` — Check that a file does NOT exist (for deletion tasks)
+**Format:** Newline-separated shell commands, same as the body of a shell script.
 
 **Format rules:**
 
-- One check per line, formatted as `check_type: argument`
-- Lines starting with `#` are comments (skipped)
-- Blank lines are skipped
-<!-- BEGIN:claude,cursor -->
-- Non-DSL lines (plain English) are silently skipped — but prefer DSL-only
-<!-- END:claude,cursor -->
-- The command after `bash:` is passed to `sh -c`, so pipes and `&&` work
+- One command per line
+- Each line is passed to `sh -c`; passes if exit code is 0
+- Blank lines are ignored
+- Pipes and `&&` work
+- Use `test -f <path>` to check file existence, `test ! -f <path>` for absence
 
 <!-- BEGIN:claude,cursor -->
 **Example acceptance criteria:**
 ```bash
-bash: uv run pytest tests/test_auth.py -q
-file_exists: src/auth/login.py
-bash: uv run mypy src/auth/ --no-error-summary
+uv run pytest tests/test_auth.py -q
+test -f src/auth/login.py
+uv run mypy src/auth/ --no-error-summary
 ```
 
 **Example transformation:**
@@ -266,11 +260,8 @@ Spec task "User Authentication" with integration test steps might pour into:
    - Target 5-10 implementation tasks per spec task
    - Each implementation task = one molecule (or singular task)
    - See "Task Granularity" section above for guidance
-6. **Read spec frontmatter variables** (workflow formula mode only): Extract optional fields for formula variables:
-   - `auto_discovery` (default: `false`) - Enable auto task creation from gaps
-   - `auto_learnings` (default: `false`) - Enable auto skill creation from learnings
-7. **Generate acceptance criteria**: Create DSL acceptance criteria for each implementation task (see Acceptance Criteria Generation above)
-8. **Confirm with user** ({{ASK_USER}}):
+6. **Generate acceptance criteria**: Create acceptance criteria for each implementation task (see Acceptance Criteria Generation above)
+7. **Confirm with user** ({{ASK_USER}}):
 
    Present a summary and let user choose. The summary differs based on workflow mode:
 
@@ -280,7 +271,7 @@ Spec task "User Authentication" with integration test steps might pour into:
 
    Spec tasks: 27
    Implementation tasks: ~135 (after breakdown)
-   Formula: choochoo (3 workflow steps each)
+   Formula: choochoo (5 workflow steps each)
 
    Options:
    - Pour all tasks (Recommended) - Proceed with pouring
@@ -311,7 +302,7 @@ Spec task "User Authentication" with integration test steps might pour into:
 
    **If "Cancel":** Exit without pouring
 
-   **If "Pour all tasks":** Continue to step 9
+   **If "Pour all tasks":** Continue to step 8
 
 <!-- END:claude,cursor -->
 <!-- BEGIN:codex -->
@@ -335,31 +326,19 @@ Do not pour until user confirms.
 <!-- END:codex -->
 
 <!-- BEGIN:claude,cursor -->
-9. **Pour tasks sequentially**:
+8. **Pour tasks sequentially**:
 
    For each implementation task, run the pour command, then immediately set its acceptance criteria and priority. Do NOT use sub-agents — pour all tasks yourself, sequentially.
 <!-- END:claude,cursor -->
 
-<!-- BEGIN:claude -->
-   > **⚠️ CRITICAL: Assignee Requirement**
-   >
-   > ALL poured tasks MUST include `--assignee ralph`.
-   > If tasks are created without `--assignee ralph`, they won't be picked up by the Ralph loop.
-<!-- END:claude -->
-<!-- BEGIN:cursor -->
-   > **⚠️ CRITICAL: Assignee Requirement**
-   >
-   > ALL poured tasks MUST include `--assignee ralph`.
-   > If tasks are created without `--assignee ralph`, they won't be picked up by the Ralph loop.
-<!-- END:cursor -->
 <!-- BEGIN:codex -->
 For each implementation task, run the pour command, then immediately set its acceptance criteria and priority. Do NOT use sub-agents — pour all tasks yourself, sequentially.
-
-> **CRITICAL: Assignee Requirement**
->
-> ALL poured tasks MUST include `--assignee ralph`.
-> If tasks are created without `--assignee ralph`, they won't be picked up by the Ralph loop.
 <!-- END:codex -->
+
+> **Important: Do NOT set `--assignee` during pour.** The runner discovers unassigned
+> molecules via `bd ready` and claims them with `bd update <id> --claim`, which
+> atomically sets `assignee = ralph-choochoo` and `status = in_progress`.
+> Pre-assigning would prevent the runner from finding the bead.
 
    **For workflow formula mode**, each task requires two commands:
 
@@ -369,10 +348,7 @@ For each implementation task, run the pour command, then immediately set its acc
    bd mol pour <FORMULA_NAME> \
      --var title="<TASK_TITLE>" \
      --var task="<TASK_DESCRIPTION>" \
-     --var category="<TASK_CATEGORY>" \
-     --var auto_discovery="<SPEC_AUTO_DISCOVERY>" \
-     --var auto_learnings="<SPEC_AUTO_LEARNINGS>" \
-     --assignee ralph
+     --var category="<TASK_CATEGORY>"
    ```
 
    **Capture the root bead ID** from the output (e.g. `proj-mol-abc`).
@@ -381,12 +357,12 @@ For each implementation task, run the pour command, then immediately set its acc
 
    ```bash
    bd update <ROOT_BEAD_ID> \
-     --acceptance "<ACCEPTANCE_CRITERIA_DSL>" \
+     --acceptance "<ACCEPTANCE_CRITERIA>" \
      --priority <TASK_PRIORITY>
    ```
 
 <!-- BEGIN:claude,cursor -->
-   The `<ACCEPTANCE_CRITERIA_DSL>` is a newline-separated string of DSL checks. The runner parses and executes these after the agent finishes. Use the check types documented in "Verification DSL Format" above.
+   The `<ACCEPTANCE_CRITERIA>` is a newline-separated string of shell commands. The runner executes each line via `sh -c` after the agent finishes. See "Acceptance Criteria Format" above.
 
    **Complete example** (two commands per task):
 
@@ -395,16 +371,15 @@ For each implementation task, run the pour command, then immediately set its acc
    bd mol pour choochoo \
      --var title="Add login form with validation" \
      --var task="Create a login form component with email/password fields and client-side validation." \
-     --var category="functional" \
-     --assignee ralph
+     --var category="functional"
 
-   # Output: Created molecule proj-mol-x7k with 3 steps
+   # Output: Created molecule proj-mol-x7k with 5 steps
 
    # Step B: Set acceptance criteria + priority
    bd update proj-mol-x7k \
-     --acceptance "bash: uv run pytest tests/test_login.py -q
-   file_exists: src/components/auth/LoginForm.tsx
-   bash: uv run mypy src/components/auth/ --no-error-summary" \
+     --acceptance "uv run pytest tests/test_login.py -q
+   test -f src/components/auth/LoginForm.tsx
+   uv run mypy src/components/auth/ --no-error-summary" \
      --priority 1
    ```
 
@@ -421,7 +396,6 @@ For each implementation task, run the pour command, then immediately set its acc
    - Use `--var` for variables (not `--set`)
    - `<TASK_DESCRIPTION>` is the task description only — do NOT append test steps to it
    - `<TASK_CATEGORY>` comes from the spec task's category attribute
-   - `<SPEC_AUTO_DISCOVERY>` and `<SPEC_AUTO_LEARNINGS>` come from spec frontmatter (default to `false`)
    - Priority values: 0-4 (0=critical, 1=high, 2=medium, 3=low, 4=backlog)
 
    **For singular task mode**, each task also requires two commands:
@@ -430,16 +404,14 @@ For each implementation task, run the pour command, then immediately set its acc
 
    ```bash
    bd create "<TASK_TITLE>" \
-     --description "<TASK_DESCRIPTION_WITH_TEMPLATE>" \
-     --assignee ralph \
-     --labels "<TASK_CATEGORY>"
+     --description "<TASK_DESCRIPTION_WITH_TEMPLATE>"
    ```
 
    **Step B — Set acceptance criteria and priority:**
 
    ```bash
    bd update <BEAD_ID> \
-     --acceptance "<ACCEPTANCE_CRITERIA_DSL>" \
+     --acceptance "<ACCEPTANCE_CRITERIA>" \
      --priority <TASK_PRIORITY>
    ```
 
@@ -470,31 +442,15 @@ For each implementation task, run the pour command, then immediately set its acc
 
    1. Implement the changes
    2. Self-verify (run tests, type checks)
-   3. Write the result JSON file to the configured path
-   4. Update `.choochoo/state.md` with anything you learned
-   5. Exit
+   3. Exit when done
 
    ## Constraints
-   - Do NOT run `bd` commands — the runner handles beads lifecycle
    - Do NOT run `git add` or `git commit` — the runner handles git
-
-   ## Capturing Learnings
-   In the `notes` field of the result file, record:
-   - `[LEARNING]` — anything useful for future iterations
-   - `[GAP]` — missing work or unclear requirements
    ```
 
 <!-- BEGIN:claude,cursor -->
-10. **Verify assignees** (REQUIRED):
-    - After all tasks are poured, verify that they have the correct assignee
-    - For each bead ID captured in step 9, run: `bd show <bead-id>` and check the Assignee field
-    - If any poured tasks are missing the assignee, fix them immediately:
-      ```bash
-      bd update <bead-id> --assignee ralph
-      ```
-    - Report verification results to user: "Verified N tasks assigned to ralph (fixed M)"
-11. **Update spec frontmatter**: After all tasks are poured successfully, update the spec's YAML frontmatter `poured` array with the created bead IDs (see below)
-12. **Archive spec**: Move spec to archive folder after all tasks poured (see below)
+9. **Update spec frontmatter**: After all tasks are poured successfully, update the spec's YAML frontmatter `poured` array with the created bead IDs (see below)
+10. **Archive spec**: Move spec to archive folder after all tasks poured (see below)
 
 ## Error Recovery
 
@@ -588,20 +544,6 @@ Options:
 - Exit without pouring
 <!-- END:claude,cursor -->
 <!-- BEGIN:codex -->
-## Required post-checks
-
-- Verify assignee for every created bead:
-
-```bash
-bd show <bead-id>
-```
-
-- If assignee is wrong, fix immediately:
-
-```bash
-bd update <bead-id> --assignee ralph
-```
-
 ## Spec updates
 
 After successful pour:

@@ -142,7 +142,7 @@ Before installing, check which bundled formula files already exist in `.beads/fo
 1. **Check dev-browser plugin**: Check your available skills for `dev-browser`
    - If not available, recommend installing it for browser-based smoke tests and UI verification
    - GitHub: https://github.com/SawyerHood/dev-browser
-   - This plugin is used by the bearings step (smoke test) and verify step (UI verification)
+   - This plugin is useful for browser-based smoke tests and UI verification during workflow steps
 
 ## Output
 

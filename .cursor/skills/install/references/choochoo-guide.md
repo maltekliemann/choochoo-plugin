@@ -47,7 +47,7 @@ Steps have `needs` fields for ordering. Created by pouring a formula.
 
 A TOML file defining workflow steps. Gets "poured" into a molecule — each step
 in the formula becomes a step bead under a root bead. The default `choochoo`
-formula has three steps: `bearings` → `implement` → `verify`.
+formula has five steps: `design` → `implement` → `review` → `test` → `submit`.
 
 ### Compound
 
@@ -68,6 +68,7 @@ in_progress → blocked       (agent marks step as blocked)
 in_progress → deferred      (agent defers step)
 closed      → open          (Inspector reopens on verification failure)
 blocked     → open          (Inspector reopens, vote below threshold)
+deferred    → open          (Inspector reopens, vote below threshold)
 ```
 
 ### Molecule Lifecycle
@@ -203,30 +204,39 @@ How tasks become molecules in the Beads DB.
 For each implementation task:
 
 ```bash
-# Step 1: Create the molecule
+# Step 1: Create the molecule (no assignee — the runner claims it later)
 bd mol pour choochoo \
   --var title="Add login form" \
   --var task="Create login form with validation..." \
-  --var category="functional" \
-  --assignee ralph
+  --var category="functional"
 
 # Step 2: Set acceptance criteria + priority
 bd update <root-id> \
-  --acceptance "bash: pytest tests/test_login.py -q
-file_exists: src/components/LoginForm.tsx" \
+  --acceptance "pytest tests/test_login.py -q
+test -f src/components/LoginForm.tsx" \
   --priority 1
 ```
 
+Do NOT set `--assignee` during pour. The runner claims unassigned molecules via
+`bd update <root> --claim`, which atomically sets `assignee = ralph-choochoo`
+and `status = in_progress`. Pre-assigning would prevent the runner from finding
+the bead.
+
 ### Acceptance Criteria
 
-Machine-executable checks set on the root bead. The runner executes these after
-the agent finishes. See `acceptance-dsl.md` for the DSL reference.
+Verification commands set on the root bead via `bd update --acceptance`. The
+runner executes these after the agent finishes. Each line is a shell command
+passed to `sh -c`; the check passes if exit code is 0.
 
-Available check types:
+Format: newline-separated shell commands, same as the body of a shell script.
 
-- `bash: <command>` — passes if exit code is 0
-- `file_exists: <path>` — check file exists
-- `file_not_exists: <path>` — check file does NOT exist
+```
+pytest tests/test_auth.py -q
+mypy src/auth/ --no-error-summary
+test -f src/auth/login.py
+```
+
+Pipes and `&&` work (commands run via `sh -c`). Blank lines are ignored.
 
 ### Task Ordering
 
@@ -245,8 +255,8 @@ bd dep add <mol-2> <mol-1> --type blocks   # mol-2 waits for mol-1
 | **Formula** | `bd mol pour <formula>` | Production features (structured workflow) |
 | **Singular** | `bd create` | Exploratory work, one-off tasks |
 
-Formula mode creates a molecule with workflow steps (bearings → implement →
-verify). Singular mode creates a plain bead executed directly.
+Formula mode creates a molecule with workflow steps (design → implement →
+review → test → submit). Singular mode creates a plain bead executed directly.
 
 ## The Runner
 
@@ -261,7 +271,7 @@ The `choochoo` CLI. Runs the autonomous loop.
    each with `bd close`
 5. **Inspector** — runs verification checks (acceptance criteria + global checks)
 6. **Refinery** — merges worktree branch into feature branch (`--ff-only`)
-7. **Cleanup** — removes worktree, tombstones completed molecules
+7. **Cleanup** — removes worktree, closes completed molecules
 8. **Next** — moves to next molecule in the compound
 
 ### Handoff
@@ -368,7 +378,7 @@ The agent's context comes from four categories:
 | Category | Content | Source |
 |----------|---------|--------|
 | **A — Beads/Choo Choo ops** | How to use `bd` commands, work loop, step lifecycle | Agent context file (CLAUDE.md / AGENTS.md) |
-| **B — Workflow phases** | Phase instructions (bearings, implement, verify) | Step bead descriptions (from formula) |
+| **B — Workflow phases** | Phase instructions (design, implement, review, test, submit) | Step bead descriptions (from formula) |
 | **C — Repository rules** | Coding standards, test commands, conventions | Agent context file (CLAUDE.md / AGENTS.md) |
 | **D — Task context** | What to build, requirements, acceptance criteria | Root bead description |
 
@@ -388,16 +398,13 @@ TOML files defining workflow steps. Stored in `.beads/formulas/`.
 
 ### The `choochoo` Formula (Default)
 
-Three steps: `bearings` → `implement` → `verify`
+Five steps: `design` → `implement` → `review` → `test` → `submit`
 
-- **bearings** — Read task context, identify relevant files, understand patterns
-- **implement** — Make code changes, follow existing patterns, add tests
-- **verify** — Run test suite, type checking, linting; fix trivial issues inline
-
-Optional conditional steps (enabled via spec frontmatter):
-
-- **gap-review** — Review `[GAP]` notes, pour new tasks for discovered gaps
-- **learning-capture** — Review `[LEARNING]` notes, create/update skills
+- **design** — Read context, understand existing patterns, plan the approach
+- **implement** — Make code changes, follow existing conventions
+- **review** — Self-review the implementation for correctness
+- **test** — Write and run tests, type checking, linting
+- **submit** — Commit with a clear message
 
 ### Other Bundled Formulas
 
