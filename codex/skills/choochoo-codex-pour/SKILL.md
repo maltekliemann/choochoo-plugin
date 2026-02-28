@@ -5,6 +5,8 @@ description: Convert ready choochoo spec tasks into beads using formulas or sing
 
 # Pour into Beads
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 Create beads from ready tasks in a spec file, or directly from conversation context.
 
 ## Load reference first

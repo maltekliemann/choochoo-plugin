@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Install choochoo
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 Set up the Ralph autonomous coding workflow in this project.
 
 ## Pre-requisites Check

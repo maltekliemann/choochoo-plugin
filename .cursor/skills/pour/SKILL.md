@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Pour into Beads
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 ## Arguments
 
 <arguments>

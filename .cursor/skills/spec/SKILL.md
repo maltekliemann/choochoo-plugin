@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Generate or Refine Spec
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 ## Arguments
 
 <arguments>

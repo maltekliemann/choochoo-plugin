@@ -5,6 +5,8 @@ description: Create Ralph beads from ready tasks in a spec file or conversation 
 
 # Pour into Beads
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 ## Arguments
 
 <arguments>

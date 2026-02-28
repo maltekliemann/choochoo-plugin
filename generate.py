@@ -231,6 +231,11 @@ def process_skill(name: str, backend: str, cfg: dict) -> None:
     if skill_refs.exists():
         copy_references(skill_refs, out_path.parent)
 
+    # 9. Copy general references (shared across all skills)
+    general_refs = SOURCE / "references"
+    if general_refs.exists():
+        copy_references(general_refs, out_path.parent)
+
     print(f"  {backend:8s} → {out_path.relative_to(ROOT)}")
 
 

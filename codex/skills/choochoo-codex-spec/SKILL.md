@@ -5,6 +5,8 @@ description: Generate or refine choochoo spec files from plans or conversation c
 
 # Generate or Refine Spec
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 ## Load format rules first
 
 Read `references/spec-format.md` before writing a spec.

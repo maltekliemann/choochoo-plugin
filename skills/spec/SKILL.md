@@ -5,6 +5,8 @@ description: Generate or refine a spec file for choochoo from your plan
 
 # Generate or Refine Spec
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 ## Arguments
 
 <arguments>
