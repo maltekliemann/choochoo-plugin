@@ -38,8 +38,7 @@ SOURCE_FILES: dict[str, tuple[str, str]] = {
     "install": ("command", "skills"),
     "spec": ("command", "skills"),
     "pour": ("command", "skills"),
-    "ralph-guide": ("skill", "references"),
-    "spec-generation": ("skill", "references"),
+
 }
 
 
