@@ -1,4 +1,5 @@
 ---
+name: install
 description: Install choochoo into the current project
 ---
 

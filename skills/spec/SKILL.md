@@ -1,6 +1,6 @@
 ---
+name: spec
 description: Generate or refine a spec file for choochoo from your plan
-argument-hint: [source-file] [spec-name]
 ---
 
 # Generate or Refine Spec
@@ -74,12 +74,10 @@ Both sub-agents should return concise summaries (not full docs) that inform spec
 With context gathered:
 
 - Accept plan from conversation context or file path (`source_file`)
-- Invoke the `/choochoo:spec-generation` skill for format guidance (includes `<context>` section format)
+- Read `references/spec-format.md` for format guidance
 - **Get current date** by running `date +%Y-%m-%d` bash command for the frontmatter `created` field
 - **Include research findings** in the spec's `<context>` section
 - Generate at `.choochoo/{spec_name}.spec.md`
-
-The spec-generation skill defines the full format including the `<context>` section structure for existing_patterns, integration_points, new_technologies, and conventions.
 
 ## Mode 2: Refine Based on Comments (Review Loop)
 

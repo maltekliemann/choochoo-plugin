@@ -14,25 +14,21 @@ keywords = ["autonomous", "coding", "ralph", "beads", "workflow"]
 # ─── Backend: Claude ─────────────────────────────────────────────────────────
 
 [claude]
-# Commands go to commands/{name}.md
-# Skills go to skills/{name}/SKILL.md
-# References go to docs/
-# Formulas go to formulas/
-# Plugin manifests go to .claude-plugin/
 
 [claude.headers.install]
-type = "command"
+type = "skill"
+name = "install"
 description = "Install choochoo into the current project"
 
 [claude.headers.spec]
-type = "command"
+type = "skill"
+name = "spec"
 description = "Generate or refine a spec file for choochoo from your plan"
-argument-hint = "[source-file] [spec-name]"
 
 [claude.headers.pour]
-type = "command"
+type = "skill"
+name = "pour"
 description = "Create Ralph beads from ready tasks in a spec file or conversation context"
-argument-hint = "[target-tasks] [spec-file] [formula]"
 
 [claude.placeholders]
 BACKEND_CHECK = """
@@ -58,19 +54,6 @@ install = "/choochoo:install"
 spec = "/choochoo:spec"
 pour = "/choochoo:pour"
 
-
-[claude.placeholders.REFS]
-anthropic-spec-format = "references/anthropic-spec-format.md"
-
-[claude.references]
-# Maps source reference files to output paths for Claude
-# Claude puts all refs in docs/
-"spec-format.md" = "docs/spec-format.md"
-"commands.md" = "docs/commands.md"
-"customization.md" = "docs/customization.md"
-"formulas.md" = "docs/formulas.md"
-"troubleshooting.md" = "docs/troubleshooting.md"
-"workflow.md" = "docs/workflow.md"
 
 # ─── Backend: Cursor ─────────────────────────────────────────────────────────
 
@@ -120,19 +103,6 @@ install = "the install skill"
 spec = "the spec skill"
 pour = "the pour skill"
 
-
-[cursor.placeholders.REFS]
-anthropic-spec-format = "references/anthropic-spec-format.md"
-
-[cursor.references]
-# Cursor co-locates refs in skill directories
-"spec-format.md" = ".cursor/references/spec-format.md"
-"commands.md" = ".cursor/references/commands.md"
-"customization.md" = ".cursor/references/customization.md"
-"formulas.md" = ".cursor/references/formulas.md"
-"troubleshooting.md" = ".cursor/references/troubleshooting.md"
-"workflow.md" = ".cursor/references/workflow.md"
-"anthropic-spec-format.md" = ".cursor/references/anthropic-spec-format.md"
 
 # ─── Backend: Codex ──────────────────────────────────────────────────────────
 
@@ -188,11 +158,3 @@ spec = "the spec skill"
 pour = "the pour skill"
 
 
-[codex.placeholders.REFS]
-anthropic-spec-format = "references/anthropic-spec-format.md"
-
-[codex.references]
-# Codex co-locates refs per skill
-"spec-format.md" = "codex/skills/choochoo-codex-spec/references/spec-format.md"
-"acceptance-dsl.md" = "codex/skills/choochoo-codex-pour/references/acceptance-dsl.md"
-"operations.md" = "codex/references/operations.md"

@@ -106,15 +106,7 @@ Summarize findings concisely. Include them in the spec's `<context>` section
 With context gathered:
 
 - Accept plan from conversation context or file path<!-- BEGIN:claude,cursor --> (`source_file`)<!-- END:claude,cursor -->
-<!-- BEGIN:claude -->
-- Invoke the `/choochoo:spec-generation` skill for format guidance (includes `<context>` section format)
-<!-- END:claude -->
-<!-- BEGIN:cursor -->
-- Invoke the `spec-generation` skill for format guidance (includes `<context>` section format)
-<!-- END:cursor -->
-<!-- BEGIN:codex -->
-- Follow the spec format from `references/spec-format.md`
-<!-- END:codex -->
+- Read `references/spec-format.md` for format guidance
 - **Get current date** by running `date +%Y-%m-%d` bash command for the frontmatter `created` field
 - **Include research findings** in the spec's `<context>` section
 <!-- BEGIN:codex -->
@@ -124,10 +116,6 @@ With context gathered:
 <!-- END:codex -->
 - Generate at `.choochoo/{spec_name}.spec.md`
 
-<!-- BEGIN:claude,cursor -->
-The spec-generation skill defines the full format including the `<context>` section structure for existing_patterns, integration_points, new_technologies, and conventions.
-
-<!-- END:claude,cursor -->
 ## Mode 2: Refine Based on Comments (Review Loop)
 
 When spec exists and has non-empty `<review>` tags:

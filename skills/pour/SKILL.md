@@ -1,6 +1,6 @@
 ---
+name: pour
 description: Create Ralph beads from ready tasks in a spec file or conversation context
-argument-hint: [target-tasks] [spec-file] [formula]
 ---
 
 # Pour into Beads

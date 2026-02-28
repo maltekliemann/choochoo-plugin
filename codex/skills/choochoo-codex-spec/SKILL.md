@@ -66,7 +66,7 @@ Summarize findings concisely. Include them in the spec's `<context>` section
 With context gathered:
 
 - Accept plan from conversation context or file path
-- Follow the spec format from `references/spec-format.md`
+- Read `references/spec-format.md` for format guidance
 - **Get current date** by running `date +%Y-%m-%d` bash command for the frontmatter `created` field
 - **Include research findings** in the spec's `<context>` section
 - Set `iteration: 1` and `poured: []`
