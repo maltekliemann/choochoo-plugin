@@ -5,11 +5,13 @@ description: Convert ready choochoo spec tasks into beads using formulas or sing
 
 # Pour into Beads
 
+> For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
+
 Create beads from ready tasks in a spec file, or directly from conversation context.
 
 ## Load reference first
 
-Read `references/acceptance-dsl.md` before generating acceptance criteria.
+Read `references/acceptance-criteria.md` before generating acceptance criteria.
 
 ## Inputs
 
@@ -57,7 +59,7 @@ If no spec file provided or found:
 
 After determining the source (spec file or conversation), ask the user how they want to pour:
 
-- **Use workflow formula (Recommended)** - Multi-step workflow with structured phases (bearings, implement, verify). The runner handles git commits and beads lifecycle. Best for production features.
+- **Use workflow formula (Recommended)** - Multi-step workflow with structured phases (design, implement, review, test, submit). The runner handles git commits and beads lifecycle. Best for production features.
 - **Create singular tasks** - Simple beads executed directly. Good for exploratory work, research, prototyping, or one-off tasks.
 
 **If "Use workflow formula"**: Proceed to Formula Selection below.
@@ -81,7 +83,7 @@ After determining the source (spec file or conversation), ask the user how they 
 
 1. **Spec tasks** = High-level features/capabilities from the spec
 2. **Implementation tasks** = Granular, atomic units of work (molecules)
-3. **Formula steps** = Workflow phases within each task (bearings, implement, verify) - these are NOT counted toward task granularity. Note: the runner handles git commits and beads lifecycle automatically.
+3. **Formula steps** = Workflow phases within each task (design, implement, review, test, submit) - these are NOT counted toward task granularity. Note: the runner handles git commits and beads lifecycle automatically.
 
 ### Target Implementation Tasks
 
@@ -111,30 +113,34 @@ Each implementation task (molecule) should be a **coherent slice of work**:
 
 ## Acceptance Criteria Generation
 
-When pouring spec tasks into beads, **generate acceptance criteria** for each bead using the verification DSL. These are set on the root bead via `bd update --acceptance` and are executed by the runner after the agent finishes.
+When pouring spec tasks into beads, **generate acceptance criteria** for each bead. These are set on the root bead via `bd update --acceptance` and are executed by the runner after the agent finishes.
 
 ### Acceptance Criteria Complexity
 
-| Task Type        | Checks | Examples                                         |
-| ---------------- | ------ | ------------------------------------------------ |
-| Simple/focused   | 2-3    | File exists, test suite passes                   |
-| Standard feature | 3-5    | Tests pass, file exists, no old references       |
-| Complex workflow | 5-8    | Multiple test files, build passes, lint passes   |
+| Task Type        | Checks | Examples                                           |
+| ---------------- | ------ | -------------------------------------------------- |
+| Simple/focused   | 2-3    | Test suite passes, linter passes                   |
+| Standard feature | 3-5    | Tests pass, type checker passes, linter passes     |
+| Complex workflow | 5-8    | Multiple test suites, build passes, lint passes    |
 
-### Verification DSL Format (REQUIRED for acceptance criteria)
+### Acceptance Criteria Format (REQUIRED)
 
-Available check types:
-
-- `bash: <command>` — Run a shell command; passes if exit code is 0
-- `file_exists: <path>` — Check that a file exists at the given path
-- `file_not_exists: <path>` — Check that a file does NOT exist (for deletion tasks)
+**Format:** Newline-separated shell commands, same as the body of a shell script.
 
 **Format rules:**
 
-- One check per line, formatted as `check_type: argument`
-- Lines starting with `#` are comments (skipped)
-- Blank lines are skipped
-- The command after `bash:` is passed to `sh -c`, so pipes and `&&` work
+- One command per line
+- Each line is passed to `sh -c`; passes if exit code is 0
+- Blank lines are ignored
+- Pipes and `&&` work
+- Only use CI commands: test suites, linters, type checkers, build steps
+- Do NOT use `test -f` (file existence), `grep`, or anything outside of CI
+
+**Execution environment:** Commands run in a bare shell (`sh -c`) with the worktree as the working directory. There is NO venv activation, no project-specific PATH, and no prior build step. You must account for this:
+
+- Use `uv run <cmd>` (or equivalent) for project entry points and CLI tools installed via the project
+- If the task produces a binary, install/build before testing it (e.g., `uv sync && uv run <cmd>`)
+- Do not assume any tool is on PATH unless it's a standard system utility
 
 ## Ask before pouring
 
@@ -152,36 +158,34 @@ Options:
 
 Do not pour until user confirms.
 
-## Pour tasks sequentially
+## Pour tasks via batch script
 
-For each implementation task, run the pour command, then immediately set its acceptance criteria and priority. Do NOT use sub-agents — pour all tasks yourself, sequentially.
+You MUST generate a shell script (`.choochoo/pour-tasks.sh`) and run it. Never pour tasks by executing `bd` commands individually. The script defines a `pour()` helper that runs `bd mol pour` (or `bd create`), extracts the root bead ID, then runs `bd update` to set acceptance criteria and priority. Use `set -e` so the script stops on first failure. After all tasks are poured, chain them into a single linear compound by running `bd dep add <next> <prev> --type blocks` for each consecutive pair of poured IDs. Pour tasks in priority order (ascending), then spec order within the same priority — the chaining assumes this ordering. Run the script with `bash .choochoo/pour-tasks.sh`. Clean up the script after a successful run.
 
-> **CRITICAL: Assignee Requirement**
->
-> ALL poured tasks MUST include `--assignee ralph`.
-> If tasks are created without `--assignee ralph`, they won't be picked up by the Ralph loop.
+> **Important: Do NOT set `--assignee` during pour.** The runner discovers unassigned
+> molecules via `bd ready` and claims them with `bd update <id> --claim`, which
+> atomically sets `assignee = ralph-choochoo` and `status = in_progress`.
+> Pre-assigning would prevent the runner from finding the bead.
 
-   **For workflow formula mode**, each task requires two commands:
+   **For workflow formula mode**, each task requires two commands (inside the `pour()` helper):
 
    **Step A — Create the molecule:**
 
    ```bash
    bd mol pour <FORMULA_NAME> \
-     --var title="<TASK_TITLE>" \
-     --var task="<TASK_DESCRIPTION>" \
-     --var category="<TASK_CATEGORY>" \
-     --var auto_discovery="<SPEC_AUTO_DISCOVERY>" \
-     --var auto_learnings="<SPEC_AUTO_LEARNINGS>" \
-     --assignee ralph
+     --var feature="<TASK_TITLE_AND_DESCRIPTION>"
    ```
+
+   The `--var` names must match the formula's declared variables. Run `bd formula show <FORMULA_NAME>` to see which variables are required. Common variable names: `feature`, `title`, `task`, `assignee`. Pass only the variables the formula declares.
 
    **Capture the root bead ID** from the output (e.g. `proj-mol-abc`).
 
-   **Step B — Set acceptance criteria and priority on the root bead:**
+   **Step B — Set title, acceptance criteria, and priority on the root bead:**
 
    ```bash
    bd update <ROOT_BEAD_ID> \
-     --acceptance "<ACCEPTANCE_CRITERIA_DSL>" \
+     --title "<TASK_TITLE>" \
+     --acceptance "<ACCEPTANCE_CRITERIA>" \
      --priority <TASK_PRIORITY>
    ```
 
@@ -189,9 +193,7 @@ For each implementation task, run the pour command, then immediately set its acc
 
    - Use `bd mol pour` (not `bd formula pour`)
    - Use `--var` for variables (not `--set`)
-   - `<TASK_DESCRIPTION>` is the task description only — do NOT append test steps to it
-   - `<TASK_CATEGORY>` comes from the spec task's category attribute
-   - `<SPEC_AUTO_DISCOVERY>` and `<SPEC_AUTO_LEARNINGS>` come from spec frontmatter (default to `false`)
+   - Check formula variables with `bd formula show <name>` before generating the script — variable names vary by formula
    - Priority values: 0-4 (0=critical, 1=high, 2=medium, 3=low, 4=backlog)
 
    **For singular task mode**, each task also requires two commands:
@@ -200,16 +202,14 @@ For each implementation task, run the pour command, then immediately set its acc
 
    ```bash
    bd create "<TASK_TITLE>" \
-     --description "<TASK_DESCRIPTION_WITH_TEMPLATE>" \
-     --assignee ralph \
-     --labels "<TASK_CATEGORY>"
+     --description "<TASK_DESCRIPTION_WITH_TEMPLATE>"
    ```
 
    **Step B — Set acceptance criteria and priority:**
 
    ```bash
    bd update <BEAD_ID> \
-     --acceptance "<ACCEPTANCE_CRITERIA_DSL>" \
+     --acceptance "<ACCEPTANCE_CRITERIA>" \
      --priority <TASK_PRIORITY>
    ```
 
@@ -226,33 +226,11 @@ For each implementation task, run the pour command, then immediately set its acc
 
    1. Implement the changes
    2. Self-verify (run tests, type checks)
-   3. Write the result JSON file to the configured path
-   4. Update `.choochoo/state.md` with anything you learned
-   5. Exit
+   3. Exit when done
 
    ## Constraints
-   - Do NOT run `bd` commands — the runner handles beads lifecycle
    - Do NOT run `git add` or `git commit` — the runner handles git
-
-   ## Capturing Learnings
-   In the `notes` field of the result file, record:
-   - `[LEARNING]` — anything useful for future iterations
-   - `[GAP]` — missing work or unclear requirements
    ```
-
-## Required post-checks
-
-- Verify assignee for every created bead:
-
-```bash
-bd show <bead-id>
-```
-
-- If assignee is wrong, fix immediately:
-
-```bash
-bd update <bead-id> --assignee ralph
-```
 
 ## Spec updates
 
@@ -283,10 +261,12 @@ Summary differs based on workflow mode:
 - N tasks poured using <FORMULA_NAME> formula
 - Root bead IDs for each
 - Total beads created (tasks × formula steps)
+- Compound chain created (N molecules linked)
 - Command to start: `choochoo`
 
 **For singular task mode:**
 
 - N singular tasks created
 - Bead IDs for each
+- Compound chain created (N tasks linked)
 - Command to start: `choochoo`

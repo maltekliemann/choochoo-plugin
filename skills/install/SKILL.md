@@ -1,7 +1,6 @@
 ---
 name: install
 description: Install choochoo into the current project
-disable-model-invocation: true
 ---
 
 # Install choochoo
@@ -17,8 +16,8 @@ Set up the Ralph autonomous coding workflow in this project.
    - If installed, parse the version number from the output and verify it is >= 0.58.0 (the SQLite backend was removed in 0.58; older versions are not compatible)
    - If version < 0.58.0: "Beads >= v0.58.0 is required but found <version>. Please upgrade: `brew upgrade beads` or see https://github.com/steveyegge/beads/blob/main/docs/INSTALLING.md"
 
-2. **Check Cursor**: Verify you are running in Cursor
-   - If not in Cursor: Warn user they'll need it to run Ralph
+2. **Check Claude CLI**: Run `claude --version`
+   - If not installed: Warn user they'll need it to run Ralph
 
 3. **Check Python 3.10+**: Run `python3 --version`
    - If python3 is not found: "Please install Python 3.10 or later. See: https://www.python.org/downloads/"
@@ -30,9 +29,11 @@ Set up the Ralph autonomous coding workflow in this project.
    - If `.beads/` exists: run `bd list` to verify the database is accessible
      - If `bd list` fails with "database not found": the Dolt server is running but doesn't have a database for this project (the database name is derived from the directory name). Run `bd init --force` to create it.
 
-5. **Set up beads editor integration**: Run `bd setup cursor`
-   - This creates `.cursor/rules/beads.mdc` with beads workflow instructions
-   - Verify with `bd setup cursor --check`
+5. **Set up beads editor integration**: Run `bd setup claude`
+   - This installs SessionStart and PreCompact hooks into `~/.claude/settings.json`
+   - SessionStart runs `bd prime` on every session to inject beads workflow context
+   - PreCompact enables handoff — when the agent's context window fills up, the runner kills and relaunches with remaining steps
+   - Verify with `bd setup claude --check`
 
 ## Check for Existing Files
 
@@ -47,17 +48,16 @@ Before installing, check which bundled formula files already exist in `.beads/fo
 ## Installation Steps
 
 1. **Install the choochoo Python package**:
-   ```bash
-   pip install runner/
-   ```
-   - This installs the `choochoo` CLI from the runner/ directory
+   - First check if already installed: `choochoo --help`
+   - If not installed, install from PyPI: `pip install choochoo`
    - If `pip` is not available, try `pip3`
+   - If pip refuses due to system package protection, use `pip install --user choochoo`
    - If install fails, show the error and suggest the user check their Python environment
 
 2. **Copy formulas**:
-   ```bash
+   ```
    mkdir -p .beads/formulas
-   cp .cursor/skills/install/formulas/*.formula.toml .beads/formulas/
+   cp "${CLAUDE_PLUGIN_ROOT}"/formulas/*.formula.toml .beads/formulas/
    ```
 
 3. **Create spec directory and gitignore worktrees**:
@@ -205,7 +205,7 @@ Report what was installed (and what was skipped if applicable):
 
 Explain next steps:
 
-1. Use the spec skill to generate a spec from your plan
+1. Use `/choochoo:spec` to generate a spec from your plan
 2. Review and approve features in the spec
-3. Use the pour skill to create beads
+3. Use `/choochoo:pour` to create beads
 4. Run `choochoo` to start the autonomous loop

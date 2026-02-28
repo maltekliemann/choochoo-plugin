@@ -1,13 +1,8 @@
----
-name: pour
-description: Create Ralph beads from ready tasks in a spec file or conversation context
-disable-model-invocation: true
----
-
 # Pour into Beads
 
 > For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
 
+<!-- BEGIN:claude,cursor -->
 ## Arguments
 
 <arguments>
@@ -17,6 +12,20 @@ disable-model-invocation: true
 </arguments>
 
 Create beads from ready tasks in a spec file, or directly from conversation context.
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+Create beads from ready tasks in a spec file, or directly from conversation context.
+
+## Load reference first
+
+Read `references/acceptance-criteria.md` before generating acceptance criteria.
+
+## Inputs
+
+- Optional target task count
+- Optional spec file/name
+- Optional formula name
+<!-- END:codex -->
 
 ## Spec File Resolution
 
@@ -29,7 +38,7 @@ When `spec_name` is NOT provided:
 
 1. **Check for existing specs** in `.choochoo/*.spec.md`
 2. **If exactly one spec exists**: Use that spec automatically
-3. **If multiple specs exist**: Ask user which spec to pour using AskUserQuestion
+3. **If multiple specs exist**: Ask user which spec to pour<!-- BEGIN:claude,cursor --> using {{ASK_USER}}<!-- END:claude,cursor -->
 4. **If no specs exist**: Fall back to conversation mode
 
 ## Modes
@@ -48,7 +57,8 @@ If spec file is found:
 If no spec file provided or found:
 
 1. Extract tasks from conversation context
-2. **STOP and use AskUserQuestion** - Do NOT proceed without user confirmation:
+<!-- BEGIN:claude,cursor -->
+2. **STOP and use {{ASK_USER}}** - Do NOT proceed without user confirmation:
 
    ```
    Question: "No spec file found. How would you like to proceed with these tasks?"
@@ -56,19 +66,28 @@ If no spec file provided or found:
 
    Options:
    - Pour directly - Create beads immediately from these tasks
-   - Create spec first (Recommended) - Run the spec skill for reviewable task breakdown
+   - Create spec first (Recommended) - Run {{INVOKE:spec}} for reviewable task breakdown
    - Cancel - Stop without creating anything
    ```
 
 3. **Wait for user response** before taking any action
 4. If user chooses "Pour directly": create molecules from extracted tasks
-5. If user chooses "Create spec first": run the spec skill command
+5. If user chooses "Create spec first": run {{INVOKE:spec}} command
 6. If user chooses "Cancel": stop and report cancellation
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+2. **Ask user** before proceeding:
+   - Pour directly - Create beads immediately from these tasks
+   - Create spec first (Recommended) - Run spec skill for reviewable task breakdown
+   - Cancel - Stop without creating anything
+3. **Wait for user response** before taking any action
+<!-- END:codex -->
 
 ## Workflow Mode Selection
 
-After determining the source (spec file or conversation), ask the user how they want to pour the tasks using **AskUserQuestion**:
+After determining the source (spec file or conversation), ask the user how they want to pour<!-- BEGIN:claude,cursor --> the tasks using **{{ASK_USER}}**<!-- END:claude,cursor -->:
 
+<!-- BEGIN:claude,cursor -->
 ```
 Question: "How would you like to pour these tasks?"
 Header: "Workflow"
@@ -77,10 +96,15 @@ Options:
 - Use workflow formula (Recommended) - Multi-step workflow with structured phases (design, implement, review, test, submit). The runner handles git commits and beads lifecycle. Best for production features.
 - Create singular tasks - Simple beads executed directly. Good for exploratory work, research, prototyping, or one-off tasks.
 ```
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+- **Use workflow formula (Recommended)** - Multi-step workflow with structured phases (design, implement, review, test, submit). The runner handles git commits and beads lifecycle. Best for production features.
+- **Create singular tasks** - Simple beads executed directly. Good for exploratory work, research, prototyping, or one-off tasks.
+<!-- END:codex -->
 
 **If "Use workflow formula"**: Proceed to Formula Selection below.
 
-**If "Create singular tasks"**: Skip Formula Selection entirely and go straight to task breakdown. Tasks will be created with `bd create` instead of `bd mol pour`.
+**If "Create singular tasks"**: Skip Formula Selection entirely and go straight to task breakdown.<!-- BEGIN:claude,cursor --> Tasks will be created with `bd create` instead of `bd mol pour`.<!-- END:claude,cursor -->
 
 ## Formula Selection
 
@@ -101,6 +125,7 @@ Options:
 2. **Implementation tasks** = Granular, atomic units of work (molecules)
 3. **Formula steps** = Workflow phases within each task (design, implement, review, test, submit) - these are NOT counted toward task granularity. Note: the runner handles git commits and beads lifecycle automatically.
 
+<!-- BEGIN:claude,cursor -->
 **Example:**
 
 - Spec has 10 high-level tasks
@@ -108,13 +133,16 @@ Options:
 - Target: 50-100 implementation tasks (molecules)
 - Formula steps (5 per molecule) are internal workflow, NOT part of task count
 
+<!-- END:claude,cursor -->
 ### Target Implementation Tasks
 
 If `target_tasks` is provided (e.g., 80):
 
 - This is the target number of **implementation tasks (molecules)**, NOT spec tasks
 - Break down spec tasks to reach this target
+<!-- BEGIN:claude,cursor -->
 - A spec with 10 tasks targeting 80 molecules = ~8 implementation tasks per spec task
+<!-- END:claude,cursor -->
 
 ### Default Targets (Guidance)
 
@@ -130,11 +158,12 @@ If `target_tasks` is NOT provided, use these defaults:
 
 Each implementation task (molecule) should be a **coherent slice of work**:
 
-- **Cohesive**: All changes belong together logically (e.g., frontend + backend for one feature slice is fine)
-- **Testable together**: Can be verified as a unit - the changes make sense to test together
+- **Cohesive**: All changes belong together logically<!-- BEGIN:claude,cursor --> (e.g., frontend + backend for one feature slice is fine)<!-- END:claude,cursor -->
+- **Testable together**: Can be verified as a unit<!-- BEGIN:claude,cursor --> - the changes make sense to test together<!-- END:claude,cursor -->
 - **Complete slice**: Delivers a piece of functionality, not just a layer or file change
 - **Reasonable scope**: Not so big it's hard to review, not so small it's wasteful
 
+<!-- BEGIN:claude,cursor -->
 **TOO GRANULAR (bad):**
 
 - "Install package X" then "Install package Y" then "Install package Z" as separate tasks
@@ -155,23 +184,29 @@ Each implementation task (molecule) should be a **coherent slice of work**:
 
 **Key question:** Can this slice be implemented, committed, and tested as one coherent unit? If yes, it's the right size.
 
+<!-- END:claude,cursor -->
 ## Acceptance Criteria Generation
 
 When pouring spec tasks into beads, **generate acceptance criteria** for each bead. These are set on the root bead via `bd update --acceptance` and are executed by the runner after the agent finishes.
 
+<!-- BEGIN:claude,cursor -->
 - **Spec-level test steps** = Integration guidance (kept for reference in the spec)
 - **Bead acceptance criteria** = Machine-checkable shell commands set on the root bead
 
-### Acceptance Criteria Complexity (Important)
+<!-- END:claude,cursor -->
+### Acceptance Criteria Complexity<!-- BEGIN:claude,cursor --> (Important)<!-- END:claude,cursor -->
 
+<!-- BEGIN:claude,cursor -->
 Use a **mix of complexity** based on the task:
 
+<!-- END:claude,cursor -->
 | Task Type        | Checks | Examples                                           |
 | ---------------- | ------ | -------------------------------------------------- |
 | Simple/focused   | 2-3    | Test suite passes, linter passes                   |
 | Standard feature | 3-5    | Tests pass, type checker passes, linter passes     |
 | Complex workflow | 5-8    | Multiple test suites, build passes, lint passes    |
 
+<!-- BEGIN:claude,cursor -->
 For each bead, generate acceptance criteria that:
 
 1. Are specific to what this bead implements
@@ -179,10 +214,13 @@ For each bead, generate acceptance criteria that:
 3. Are machine-executable (no natural language)
 4. Match complexity to task importance
 
+<!-- END:claude,cursor -->
 ### Acceptance Criteria Format (REQUIRED)
 
+<!-- BEGIN:claude,cursor -->
 Write acceptance criteria as plain shell commands. The runner executes each line via `sh -c` after the agent finishes — if any command exits non-zero, the runner retries or blocks the task.
 
+<!-- END:claude,cursor -->
 **Format:** Newline-separated shell commands, same as the body of a shell script.
 
 **Format rules:**
@@ -200,6 +238,7 @@ Write acceptance criteria as plain shell commands. The runner executes each line
 - If the task produces a binary, install/build before testing it (e.g., `uv sync && uv run <cmd>`)
 - Do not assume any tool is on PATH unless it's a standard system utility
 
+<!-- BEGIN:claude,cursor -->
 **Example acceptance criteria:**
 ```bash
 uv run pytest tests/test_auth.py -q
@@ -229,7 +268,7 @@ Spec task "User Authentication" with integration test steps might pour into:
    - Each implementation task = one molecule (or singular task)
    - See "Task Granularity" section above for guidance
 6. **Generate acceptance criteria**: Create acceptance criteria for each implementation task (see Acceptance Criteria Generation above)
-7. **Confirm with user** (AskUserQuestion):
+7. **Confirm with user** ({{ASK_USER}}):
 
    Present a summary and let user choose. The summary differs based on workflow mode:
 
@@ -265,13 +304,35 @@ Spec task "User Authentication" with integration test steps might pour into:
 
    - Save full breakdown to `.choochoo/pour-preview.md`
    - Include: task title, description snippet, category, priority, acceptance criteria check count
-   - Tell user: "Overview saved to .choochoo/pour-preview.md - review and run the pour skill again when ready"
+   - Tell user: "Overview saved to .choochoo/pour-preview.md - review and run {{INVOKE:pour}} again when ready"
    - Exit without pouring
 
    **If "Cancel":** Exit without pouring
 
    **If "Pour all tasks":** Continue to step 8
 
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+## Ask before pouring
+
+Present summary and require confirmation:
+
+- spec task count
+- estimated implementation task count
+- mode (`workflow formula` or `singular`)
+- formula name when relevant
+
+Options:
+- Pour all tasks (Recommended) - Proceed with pouring
+- Show task overview first - Save preview to `.choochoo/pour-preview.md`
+- Cancel - Stop without pouring
+
+Do not pour until user confirms.
+
+## Pour tasks via batch script
+<!-- END:codex -->
+
+<!-- BEGIN:claude,cursor -->
 8. **Pour tasks via batch script** (MANDATORY):
 
    You MUST generate a shell script (`.choochoo/pour-tasks.sh`) and run it. Never pour tasks by executing `bd` commands individually — always use the batch script. This is faster, reliable, and ensures correct chaining. Do NOT use sub-agents.
@@ -361,6 +422,11 @@ Spec task "User Authentication" with integration test steps might pour into:
      echo "---"
    }
    ```
+<!-- END:claude,cursor -->
+
+<!-- BEGIN:codex -->
+You MUST generate a shell script (`.choochoo/pour-tasks.sh`) and run it. Never pour tasks by executing `bd` commands individually. The script defines a `pour()` helper that runs `bd mol pour` (or `bd create`), extracts the root bead ID, then runs `bd update` to set acceptance criteria and priority. Use `set -e` so the script stops on first failure. After all tasks are poured, chain them into a single linear compound by running `bd dep add <next> <prev> --type blocks` for each consecutive pair of poured IDs. Pour tasks in priority order (ascending), then spec order within the same priority — the chaining assumes this ordering. Run the script with `bash .choochoo/pour-tasks.sh`. Clean up the script after a successful run.
+<!-- END:codex -->
 
 > **Important: Do NOT set `--assignee` during pour.** The runner discovers unassigned
 > molecules via `bd ready` and claims them with `bd update <id> --claim`, which
@@ -389,6 +455,7 @@ Spec task "User Authentication" with integration test steps might pour into:
      --priority <TASK_PRIORITY>
    ```
 
+<!-- BEGIN:claude,cursor -->
    The `<ACCEPTANCE_CRITERIA>` is a newline-separated string of shell commands. The runner executes each line via `sh -c` after the agent finishes. See "Acceptance Criteria Format" above.
 
    **Complete example** (inside the batch script):
@@ -412,6 +479,11 @@ Spec task "User Authentication" with integration test steps might pour into:
 
    Notes for formula mode:
 
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+   Notes for formula mode:
+
+<!-- END:codex -->
    - Use `bd mol pour` (not `bd formula pour`)
    - Use `--var` for variables (not `--set`)
    - Check formula variables with `bd formula show <name>` before generating the script — variable names vary by formula
@@ -434,6 +506,7 @@ Spec task "User Authentication" with integration test steps might pour into:
      --priority <TASK_PRIORITY>
    ```
 
+<!-- BEGIN:claude,cursor -->
    **Important:** `bd create` does NOT perform any template substitution. The `<PLACEHOLDER>` values must be filled in by YOU before running the command. Whatever string you pass to `--description` is stored exactly as-is.
 
    **How to construct `<TASK_DESCRIPTION_WITH_TEMPLATE>`:**
@@ -446,9 +519,10 @@ Spec task "User Authentication" with integration test steps might pour into:
    - Use `bd create` (not `bd mol pour`)
    - **Capture the bead ID** from output
 
+<!-- END:claude,cursor -->
    ### Singular Task Description Template
 
-   For singular tasks, wrap the task description with execution instructions. Fill in `<TASK_DESCRIPTION>` with actual content before creating:
+   For singular tasks, wrap the task description with execution instructions<!-- BEGIN:claude,cursor -->. Fill in `<TASK_DESCRIPTION>` with actual content before creating<!-- END:claude,cursor -->:
 
    ```markdown
    ## Task
@@ -465,6 +539,7 @@ Spec task "User Authentication" with integration test steps might pour into:
    - Do NOT run `git add` or `git commit` — the runner handles git
    ```
 
+<!-- BEGIN:claude,cursor -->
 9. **Collect bead IDs**: Parse the script output to collect all root bead IDs. Clean up the script: `rm .choochoo/pour-tasks.sh`
 10. **Chain into compound**: The batch script chains all poured molecules into a single linear compound using `bd dep add`. The chain is: mol-1 → mol-2 → mol-3 → ... where each molecule blocks the next. Molecules are chained in pour order (by priority ascending, then spec order within the same priority). This ensures `bd ready` surfaces only one molecule at a time — the compound cursor.
 11. **Update spec frontmatter**: After all tasks are poured successfully, update the spec's YAML frontmatter `poured` array with the created bead IDs (see below)
@@ -534,18 +609,18 @@ The archived spec serves as a record of what was planned and poured, with bead I
 
 ## Handling Review Comments
 
-If any tasks have content in `<review>` tags, use **AskUserQuestion** to let the user decide:
+If any tasks have content in `<review>` tags, use **{{ASK_USER}}** to let the user decide:
 
 ```
 "Some tasks have review comments that haven't been processed."
 
 Options:
-- Run the spec skill first (Recommended) - Process review feedback before pouring
+- Run {{INVOKE:spec}} first (Recommended) - Process review feedback before pouring
 - Ignore and pour all - Pour tasks as-is, ignoring review comments
 - Cancel - Stop and let me review the spec manually
 ```
 
-**If user chooses "Run the spec skill first":**
+**If user chooses "Run {{INVOKE:spec}} first":**
 
 - Run the spec command to process review feedback
 - After spec completes, continue with pour
@@ -560,6 +635,28 @@ Options:
 
 - Report spec location for manual review
 - Exit without pouring
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+## Spec updates
+
+After successful pour:
+
+1. Update frontmatter `poured` with all created root bead IDs.
+2. Archive spec to `.choochoo/archive/`.
+
+If any step fails mid-pour:
+
+- Stop immediately.
+- Report created IDs + failure details.
+- Do not archive spec.
+
+## Handling Review Comments
+
+If any tasks have content in `<review>` tags, warn the user and offer:
+- Run spec skill first (Recommended) - Process review feedback before pouring
+- Ignore and pour all - Pour tasks as-is
+- Cancel - Stop and let user review manually
+<!-- END:codex -->
 
 ## Output
 

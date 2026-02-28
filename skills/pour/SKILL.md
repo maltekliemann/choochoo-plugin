@@ -1,7 +1,6 @@
 ---
 name: pour
 description: Create Ralph beads from ready tasks in a spec file or conversation context
-disable-model-invocation: true
 ---
 
 # Pour into Beads
@@ -56,13 +55,13 @@ If no spec file provided or found:
 
    Options:
    - Pour directly - Create beads immediately from these tasks
-   - Create spec first (Recommended) - Run the spec skill for reviewable task breakdown
+   - Create spec first (Recommended) - Run /choochoo:spec for reviewable task breakdown
    - Cancel - Stop without creating anything
    ```
 
 3. **Wait for user response** before taking any action
 4. If user chooses "Pour directly": create molecules from extracted tasks
-5. If user chooses "Create spec first": run the spec skill command
+5. If user chooses "Create spec first": run /choochoo:spec command
 6. If user chooses "Cancel": stop and report cancellation
 
 ## Workflow Mode Selection
@@ -265,7 +264,7 @@ Spec task "User Authentication" with integration test steps might pour into:
 
    - Save full breakdown to `.choochoo/pour-preview.md`
    - Include: task title, description snippet, category, priority, acceptance criteria check count
-   - Tell user: "Overview saved to .choochoo/pour-preview.md - review and run the pour skill again when ready"
+   - Tell user: "Overview saved to .choochoo/pour-preview.md - review and run /choochoo:pour again when ready"
    - Exit without pouring
 
    **If "Cancel":** Exit without pouring
@@ -540,12 +539,12 @@ If any tasks have content in `<review>` tags, use **AskUserQuestion** to let the
 "Some tasks have review comments that haven't been processed."
 
 Options:
-- Run the spec skill first (Recommended) - Process review feedback before pouring
+- Run /choochoo:spec first (Recommended) - Process review feedback before pouring
 - Ignore and pour all - Pour tasks as-is, ignoring review comments
 - Cancel - Stop and let me review the spec manually
 ```
 
-**If user chooses "Run the spec skill first":**
+**If user chooses "Run /choochoo:spec first":**
 
 - Run the spec command to process review feedback
 - After spec completes, continue with pour

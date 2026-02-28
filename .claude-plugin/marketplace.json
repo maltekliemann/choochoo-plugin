@@ -6,17 +6,17 @@
   },
   "metadata": {
     "description": "Autonomous coding using the Ralph Wiggum technique",
-    "version": "0.2.0"
+    "version": "0.3.1"
   },
   "plugins": [
     {
       "name": "choochoo",
       "source": {
         "source": "github",
-        "repo": "maltekliemann/choochoo-claude",
+        "repo": "maltekliemann/choochoo-plugin",
         "ref": "main"
       },
-      "version": "0.2.0",
+      "version": "0.3.1",
       "description": "Autonomous coding using the Ralph Wiggum technique - simple loops, persistent memory, one task at a time",
       "author": {
         "name": "Malte Kliemann",

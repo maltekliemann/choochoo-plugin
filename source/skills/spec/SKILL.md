@@ -1,13 +1,8 @@
----
-name: spec
-description: Generate or refine a spec file for choochoo from your plan
-disable-model-invocation: true
----
-
 # Generate or Refine Spec
 
 > For background on Choo! Choo! concepts, workflows, and commands, see `references/choochoo-guide.md`.
 
+<!-- BEGIN:claude,cursor -->
 ## Arguments
 
 <arguments>
@@ -16,6 +11,18 @@ spec_name = $2    <!-- Optional: name of the spec (e.g., "user-auth") -->
 </arguments>
 
 This command has smart behavior based on the current state:
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+## Load format rules first
+
+Read `references/spec-format.md` before writing a spec.
+
+## Inputs
+
+- Optional source plan path
+- Optional spec name
+- Conversation context as fallback
+<!-- END:codex -->
 
 ## Spec File Naming
 
@@ -35,13 +42,18 @@ Specs are stored as `.choochoo/<name>.spec.md`. Each project can have multiple s
 4. **If no specs exist**: Generate a suggested name based on:
    - The plan content or conversation context
    - Use kebab-case, descriptive, short (e.g., `user-auth`, `dark-mode`, `api-refactor`)
-   - Use **AskUserQuestion** to confirm or let user provide alternative:
+<!-- BEGIN:claude,cursor -->
+   - Use **{{ASK_USER}}** to confirm or let user provide alternative:
      ```
      "I'll create a new spec. Suggested name: 'user-authentication'"
      Options:
      - Use suggested name
      - [Other - user provides custom name]
      ```
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+   - Ask user to confirm or provide alternative
+<!-- END:codex -->
 
 ## Mode Detection
 
@@ -53,6 +65,7 @@ Specs are stored as `.choochoo/<name>.spec.md`. Each project can have multiple s
 
 When the target spec file doesn't exist:
 
+<!-- BEGIN:claude,cursor -->
 ### Step 1: Gather Context (Parallel Sub-Agents)
 
 Launch sub-agents in parallel to gather context before generating the spec. This keeps main context lean and speeds up research.
@@ -71,15 +84,38 @@ Launch sub-agents in parallel to gather context before generating the spec. This
 - Note any setup/configuration requirements
 
 Both sub-agents should return concise summaries (not full docs) that inform spec generation.
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+### Step 1: Gather Context (before writing anything)
+
+Before generating the spec, explore the codebase to inform task design:
+
+- **Codebase exploration** — Search existing project structure and architecture.
+  Identify patterns, conventions, file organization, test patterns, and relevant
+  code the new feature will integrate with. Note existing utilities and components
+  to reuse.
+- **Technology research** — If the plan mentions unfamiliar tech, research
+  documentation, best practices, common patterns, and integration examples with
+  the existing stack.
+
+Summarize findings concisely. Include them in the spec's `<context>` section
+(`<existing_patterns>`, `<integration_points>`, `<new_technologies>`,
+`<conventions>`).
+<!-- END:codex -->
 
 ### Step 2: Generate Spec
 
 With context gathered:
 
-- Accept plan from conversation context or file path (`source_file`)
+- Accept plan from conversation context or file path<!-- BEGIN:claude,cursor --> (`source_file`)<!-- END:claude,cursor -->
 - Read `references/spec-format.md` for format guidance
 - **Get current date** by running `date +%Y-%m-%d` bash command for the frontmatter `created` field
 - **Include research findings** in the spec's `<context>` section
+<!-- BEGIN:codex -->
+- Set `iteration: 1` and `poured: []`
+- Include `auto_discovery` and `auto_learnings` (default `false`)
+- Create concrete tasks with `id`, `priority`, `category`, `steps`, `test_steps`, and empty `<review></review>`
+<!-- END:codex -->
 - Generate at `.choochoo/{spec_name}.spec.md`
 
 ## Mode 2: Refine Based on Comments (Review Loop)
@@ -95,13 +131,27 @@ When spec exists and has non-empty `<review>` tags:
    - Comments from other AI agents
 3. **Regenerate affected tasks** based on feedback
 4. **Clear review tags** after processing (empty tags remain for future comments)
+<!-- BEGIN:codex -->
+5. **Increment frontmatter `iteration`** by 1
+6. **Leave already-approved tasks unchanged**
+<!-- END:codex -->
 
+<!-- BEGIN:claude,cursor -->
 This enables the review loop:
 
 ```
 spec → user reviews → adds comments → spec → reviews → ... → pour
 ```
 
+<!-- END:claude,cursor -->
+<!-- BEGIN:codex -->
+This enables the review loop:
+
+```
+spec → user reviews → adds comments → spec → reviews → ... → pour
+```
+
+<!-- END:codex -->
 ## Mode 3: Spec Exists, No Comments
 
 When spec exists but all `<review>` tags are empty:
@@ -111,6 +161,16 @@ When spec exists but all `<review>` tags are empty:
   - B) Continue reviewing (open spec for editing)
   - C) Proceed to pour (tasks are ready)
 
+<!-- BEGIN:codex -->
+## Quality rules
+
+- No XML declaration line (`<?xml ...?>`)
+- Keep task slices coherent and testable
+- Prefer explicit, executable test steps
+- Keep categories to: `functional`, `style`, `infrastructure`, `documentation`
+
+<!-- END:codex -->
+<!-- BEGIN:claude,cursor -->
 ## Review Comment Format
 
 Users (or other AI agents) can add comments in review tags:
@@ -157,11 +217,15 @@ iteration: 3
 
 This provides useful context about how much the spec has evolved and is queryable.
 
+<!-- END:claude,cursor -->
 ## Output
 
 **For new spec:**
 
 - Location of generated spec file
+<!-- BEGIN:codex -->
+- Mode used (`generate` or `refine`)
+<!-- END:codex -->
 - Number of tasks extracted
 - Instructions for reviewing
 - Next step: review, add comments, run spec again or pour
@@ -170,4 +234,7 @@ This provides useful context about how much the spec has evolved and is queryabl
 
 - Summary of changes made
 - Number of tasks added/modified/removed
+<!-- BEGIN:codex -->
+- Tasks still containing review comments
+<!-- END:codex -->
 - Next step: review changes, add more comments or pour

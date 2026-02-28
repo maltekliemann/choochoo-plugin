@@ -1,7 +1,6 @@
 ---
 name: spec
 description: Generate or refine a spec file for choochoo from your plan
-disable-model-invocation: true
 ---
 
 # Generate or Refine Spec

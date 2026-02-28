@@ -32,19 +32,11 @@ CONFIG_PATH = ROOT / "config.toml"
 
 BACKENDS = ("claude", "cursor", "codex")
 
-# Source files and their "kind" (command or skill).
-# Commands: install, spec, pour
-# Skills: ralph-guide, spec-generation
-SOURCE_FILES: dict[str, str] = {
-    "install": "command",
-    "spec": "command",
-    "pour": "command",
-    "ralph-guide": "skill",
-    "spec-generation": "skill",
-}
+# Fields in header config that are internal (not emitted in YAML frontmatter).
+_INTERNAL_FIELDS = {"type", "skip", "output_name"}
 
 
-# ─── Config loading ──────────────────────────────────────────────────────────
+# ─── Config ──────────────────────────────────────────────────────────────────
 
 
 def load_config() -> dict:
@@ -52,60 +44,36 @@ def load_config() -> dict:
         return tomllib.load(f)
 
 
-# ─── Placeholder resolution ─────────────────────────────────────────────────
+# ─── Discovery ───────────────────────────────────────────────────────────────
 
 
-def _resolve_invoke(match: re.Match, placeholders: dict) -> str:
-    """Resolve {{INVOKE:name}} from placeholders.INVOKE table."""
-    name = match.group(1)
-    invoke_table = placeholders.get("INVOKE", {})
-    return str(invoke_table.get(name, f"{{{{INVOKE:{name}}}}}"))
+def discover_skills() -> list[str]:
+    """Walk source/skills/ and return the name of each skill directory."""
+    skills_dir = SOURCE / "skills"
+    if not skills_dir.exists():
+        return []
+    return sorted(p.name for p in skills_dir.iterdir() if p.is_dir())
 
 
-def _resolve_refs(match: re.Match, placeholders: dict) -> str:
-    """Resolve {{REFS:name}} from placeholders.REFS table."""
-    name = match.group(1)
-    refs_table = placeholders.get("REFS", {})
-    return str(refs_table.get(name, f"{{{{REFS:{name}}}}}"))
+# ─── Text transforms ────────────────────────────────────────────────────────
 
 
-def substitute_placeholders(text: str, placeholders: dict) -> str:
-    """Replace {{PLACEHOLDER}} tokens with backend-specific values."""
-    # First handle INVOKE: and REFS: patterns
-    text = re.sub(
-        r"\{\{INVOKE:([^}]+)\}\}",
-        lambda m: _resolve_invoke(m, placeholders),
-        text,
-    )
-    text = re.sub(
-        r"\{\{REFS:([^}]+)\}\}",
-        lambda m: _resolve_refs(m, placeholders),
-        text,
-    )
-    # Then handle simple {{KEY}} placeholders (skip nested tables)
-    for key, value in placeholders.items():
-        if isinstance(value, str):
-            text = text.replace(f"{{{{{key}}}}}", value)
+def strip_yaml_header(text: str) -> str:
+    """Remove existing YAML frontmatter (--- ... ---) from source."""
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            return text[end + 3 :].lstrip("\n")
     return text
 
 
-# ─── Conditional blocks ─────────────────────────────────────────────────────
-
-
 def _filter_inline_conditionals(line: str, backend: str) -> str:
-    """Handle inline <!-- BEGIN:x -->content<!-- END:x --> within a single line.
-
-    Keeps content between markers if backend is in the list; removes it otherwise.
-    Always strips the marker tags themselves.
-    """
+    """Handle inline <!-- BEGIN:x -->content<!-- END:x --> within a single line."""
     pattern = r"<!--\s*BEGIN:([^>]+?)\s*-->(.*?)<!--\s*END:[^>]+?\s*-->"
 
     def _replace(m: re.Match) -> str:
-        backends_str = m.group(1)
-        allowed = {b.strip() for b in backends_str.split(",")}
-        if backend in allowed:
-            return m.group(2)
-        return ""
+        allowed = {b.strip() for b in m.group(1).split(",")}
+        return m.group(2) if backend in allowed else ""
 
     return re.sub(pattern, _replace, line)
 
@@ -113,9 +81,7 @@ def _filter_inline_conditionals(line: str, backend: str) -> str:
 def filter_conditional_blocks(text: str, backend: str) -> str:
     """Process <!-- BEGIN:backend_list --> / <!-- END:backend_list --> markers.
 
-    Supports two forms:
-    1. **Block-level**: Marker on its own line — keeps or drops enclosed lines.
-    2. **Inline**: Marker within a line — keeps or drops the enclosed text span.
+    Block-level (marker on its own line) and inline (marker within a line).
     """
     lines = text.split("\n")
     result: list[str] = []
@@ -127,39 +93,43 @@ def filter_conditional_blocks(text: str, backend: str) -> str:
         end_match = re.match(r"^\s*<!--\s*END:([^>]+?)\s*-->\s*$", line)
 
         if begin_match:
-            backends_str = begin_match.group(1)
-            allowed = {b.strip() for b in backends_str.split(",")}
+            allowed = {b.strip() for b in begin_match.group(1).split(",")}
             if include:
                 include = backend in allowed
-                depth += 1
-            else:
-                depth += 1
-            continue  # drop the marker line
+            depth += 1
+            continue
 
         if end_match:
             depth -= 1
             if depth <= 0:
                 include = True
                 depth = 0
-            continue  # drop the marker line
+            continue
 
         if include:
-            # Process any inline conditionals within the line
-            line = _filter_inline_conditionals(line, backend)
-            result.append(line)
+            result.append(_filter_inline_conditionals(line, backend))
 
     return "\n".join(result)
 
 
-# ─── YAML header generation ─────────────────────────────────────────────────
-
-
-# Fields that are internal to the build system, not emitted in YAML headers.
-_INTERNAL_FIELDS = {"type", "skip", "output_name"}
+def substitute_placeholders(text: str, placeholders: dict) -> str:
+    """Replace {{KEY}} and {{INVOKE:name}} tokens with backend-specific values."""
+    # {{INVOKE:name}}
+    invoke_table = placeholders.get("INVOKE", {})
+    text = re.sub(
+        r"\{\{INVOKE:([^}]+)\}\}",
+        lambda m: str(invoke_table.get(m.group(1), f"{{{{INVOKE:{m.group(1)}}}}}")),
+        text,
+    )
+    # {{KEY}} (simple string values only)
+    for key, value in placeholders.items():
+        if isinstance(value, str):
+            text = text.replace(f"{{{{{key}}}}}", value)
+    return text
 
 
 def make_yaml_header(header_cfg: dict) -> str:
-    """Build a YAML frontmatter header from config."""
+    """Build YAML frontmatter from config, skipping internal fields."""
     lines = ["---"]
     for key, value in header_cfg.items():
         if key in _INTERNAL_FIELDS:
@@ -172,35 +142,23 @@ def make_yaml_header(header_cfg: dict) -> str:
     return "\n".join(lines)
 
 
-# ─── Source stripping ────────────────────────────────────────────────────────
+def collapse_blank_lines(text: str) -> str:
+    """Collapse runs of 3+ consecutive newlines down to 2."""
+    return re.sub(r"\n{3,}", "\n\n", text)
 
 
-def strip_yaml_header(text: str) -> str:
-    """Remove existing YAML frontmatter (--- ... ---) from source."""
-    if text.startswith("---"):
-        end = text.find("---", 3)
-        if end != -1:
-            return text[end + 3:].lstrip("\n")
-    return text
+# ─── Output paths ───────────────────────────────────────────────────────────
 
 
-# ─── Output path calculation ────────────────────────────────────────────────
-
-
-def output_path_for(backend: str, name: str, kind: str, cfg: dict) -> Path:
-    """Determine the output file path for a source file."""
+def output_path_for(backend: str, name: str, cfg: dict) -> Path:
+    """Compute the output file path for a skill."""
     if backend == "claude":
-        if kind == "command":
-            return ROOT / "commands" / f"{name}.md"
-        else:  # skill
-            return ROOT / "skills" / name / "SKILL.md"
+        return ROOT / "skills" / name / "SKILL.md"
 
-    elif backend == "cursor":
-        # Everything is a skill in .cursor/skills/{name}/SKILL.md
+    if backend == "cursor":
         return ROOT / ".cursor" / "skills" / name / "SKILL.md"
 
-    elif backend == "codex":
-        # Check for output_name override in header config
+    if backend == "codex":
         header_cfg = cfg.get("codex", {}).get("headers", {}).get(name, {})
         output_name = header_cfg.get("output_name")
         if output_name:
@@ -213,23 +171,72 @@ def output_path_for(backend: str, name: str, kind: str, cfg: dict) -> Path:
     raise ValueError(f"Unknown backend: {backend}")
 
 
-# ─── Reference file distribution ────────────────────────────────────────────
+# ─── Reference copying ──────────────────────────────────────────────────────
 
 
-def distribute_references(cfg: dict) -> None:
-    """Copy source/references/ files to backend-specific locations."""
-    refs_dir = SOURCE / "references"
-    if not refs_dir.exists():
+def copy_references(refs_dir: Path, dest_dir: Path) -> None:
+    """Copy all files from refs_dir into dest_dir/references/."""
+    for ref in refs_dir.iterdir():
+        if ref.is_file():
+            dest = dest_dir / "references" / ref.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ref, dest)
+
+
+# ─── Skill processing pipeline ──────────────────────────────────────────────
+
+
+def process_skill(name: str, backend: str, cfg: dict) -> None:
+    """Process a single skill for a single backend."""
+    header_cfg = cfg.get(backend, {}).get("headers", {}).get(name, {})
+    if header_cfg.get("skip"):
+        print(f"  {backend:8s}    (skipped)")
         return
 
-    for backend in BACKENDS:
-        refs_map = cfg.get(backend, {}).get("references", {})
-        for src_name, dest_rel in refs_map.items():
-            src_path = refs_dir / src_name
-            dest_path = ROOT / dest_rel
-            if src_path.exists():
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_path, dest_path)
+    src_path = SOURCE / "skills" / name / "SKILL.md"
+    if not src_path.exists():
+        print(f"  SKIP {name} (SKILL.md not found)", file=sys.stderr)
+        return
+
+    text = src_path.read_text()
+
+    # 1. Strip existing YAML header
+    text = strip_yaml_header(text)
+
+    # 2. Filter conditional blocks
+    text = filter_conditional_blocks(text, backend)
+
+    # 3. Substitute placeholders
+    placeholders = cfg.get(backend, {}).get("placeholders", {})
+    text = substitute_placeholders(text, placeholders)
+
+    # 4. Prepend backend-specific YAML header
+    if header_cfg:
+        text = make_yaml_header(header_cfg) + "\n\n" + text
+
+    # 5. Collapse excessive blank lines
+    text = collapse_blank_lines(text)
+
+    # 6. Ensure trailing newline
+    if not text.endswith("\n"):
+        text += "\n"
+
+    # 7. Write output
+    out_path = output_path_for(backend, name, cfg)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(text)
+
+    # 8. Copy general references (shared across all skills)
+    general_refs = SOURCE / "references"
+    if general_refs.exists():
+        copy_references(general_refs, out_path.parent)
+
+    # 9. Copy skill-specific references (override general on name collision)
+    skill_refs = SOURCE / "skills" / name / "references"
+    if skill_refs.exists():
+        copy_references(skill_refs, out_path.parent)
+
+    print(f"  {backend:8s} → {out_path.relative_to(ROOT)}")
 
 
 # ─── Formula distribution ───────────────────────────────────────────────────
@@ -278,25 +285,24 @@ def distribute_formulas() -> None:
 
 def distribute_templates() -> None:
     """Copy templates/ to backend output locations."""
-    # Codex templates
     codex_tmpl = TEMPLATES / "codex"
-    if codex_tmpl.exists():
-        # AGENTS.md → codex/AGENTS.md
-        agents_src = codex_tmpl / "AGENTS.md"
-        if agents_src.exists():
-            dest = ROOT / "codex" / "AGENTS.md"
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(agents_src, dest)
+    if not codex_tmpl.exists():
+        return
 
-        # install-skills.sh → codex/scripts/install-skills.sh
-        script_src = codex_tmpl / "install-skills.sh"
-        if script_src.exists():
-            dest = ROOT / "codex" / "scripts" / "install-skills.sh"
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(script_src, dest)
+    agents_src = codex_tmpl / "AGENTS.md"
+    if agents_src.exists():
+        dest = ROOT / "codex" / "AGENTS.md"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(agents_src, dest)
+
+    script_src = codex_tmpl / "install-skills.sh"
+    if script_src.exists():
+        dest = ROOT / "codex" / "scripts" / "install-skills.sh"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(script_src, dest)
 
 
-# ─── Claude manifests ────────────────────────────────────────────────────────
+# ─── Claude manifests ───────────────────────────────────────────────────────
 
 
 def generate_claude_manifests(cfg: dict) -> None:
@@ -337,7 +343,7 @@ def generate_claude_manifests(cfg: dict) -> None:
                 "name": plugin_cfg.get("name", "choochoo"),
                 "source": {
                     "source": "github",
-                    "repo": "maltekliemann/choochoo-claude",
+                    "repo": "maltekliemann/choochoo-plugin",
                     "ref": "main",
                 },
                 **plugin_json,
@@ -350,7 +356,7 @@ def generate_claude_manifests(cfg: dict) -> None:
         f.write("\n")
 
 
-# ─── Claude settings ─────────────────────────────────────────────────────────
+# ─── Claude settings ────────────────────────────────────────────────────────
 
 
 def generate_claude_settings() -> None:
@@ -378,66 +384,7 @@ def generate_claude_settings() -> None:
         f.write("\n")
 
 
-# ─── Cleanup of consecutive blank lines ─────────────────────────────────────
-
-
-def collapse_blank_lines(text: str) -> str:
-    """Collapse runs of 3+ consecutive newlines down to 2 (one empty line)."""
-    return re.sub(r"\n{3,}", "\n\n", text)
-
-
-# ─── Main pipeline ──────────────────────────────────────────────────────────
-
-
-def process_source(
-    name: str,
-    kind: str,
-    backend: str,
-    cfg: dict,
-) -> None:
-    """Process a single source file for a single backend."""
-    # Check if this source should be skipped for this backend
-    header_cfg = cfg.get(backend, {}).get("headers", {}).get(name, {})
-    if header_cfg.get("skip"):
-        print(f"  {backend:8s}    (skipped)")
-        return
-
-    src_path = SOURCE / f"{name}.md"
-    if not src_path.exists():
-        print(f"  SKIP {name} (source not found)", file=sys.stderr)
-        return
-
-    text = src_path.read_text()
-
-    # 1. Strip existing YAML header from source
-    text = strip_yaml_header(text)
-
-    # 2. Filter conditional blocks for this backend
-    text = filter_conditional_blocks(text, backend)
-
-    # 3. Substitute placeholders
-    placeholders = cfg.get(backend, {}).get("placeholders", {})
-    text = substitute_placeholders(text, placeholders)
-
-    # 4. Prepend backend-specific YAML header
-    header_cfg = cfg.get(backend, {}).get("headers", {}).get(name, {})
-    if header_cfg:
-        header = make_yaml_header(header_cfg)
-        text = header + "\n\n" + text
-
-    # 5. Clean up excessive blank lines
-    text = collapse_blank_lines(text)
-
-    # 6. Ensure trailing newline
-    if not text.endswith("\n"):
-        text += "\n"
-
-    # 7. Write to output path
-    out_path = output_path_for(backend, name, kind, cfg)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(text)
-
-    print(f"  {backend:8s} → {out_path.relative_to(ROOT)}")
+# ─── Main ────────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
@@ -445,35 +392,25 @@ def main() -> None:
 
     print("choochoo-plugins: generating backend output\n")
 
-    # Process each source file for each backend
-    for name, kind in SOURCE_FILES.items():
+    for name in discover_skills():
         print(f"[{name}]")
         for backend in BACKENDS:
-            process_source(name, kind, backend, cfg)
+            process_skill(name, backend, cfg)
         print()
 
-    # Distribute formulas
     print("[formulas]")
     distribute_formulas()
     print("  Distributed to all backends\n")
 
-    # Distribute references
-    print("[references]")
-    distribute_references(cfg)
-    print("  Distributed per config\n")
-
-    # Distribute templates
     print("[templates]")
     distribute_templates()
     print("  Codex templates copied\n")
 
-    # Generate Claude manifests
     print("[claude manifests]")
     generate_claude_manifests(cfg)
     print("  .claude-plugin/plugin.json")
     print("  .claude-plugin/marketplace.json\n")
 
-    # Generate Claude settings
     print("[claude settings]")
     generate_claude_settings()
     print("  .claude/settings.local.json\n")
