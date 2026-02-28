@@ -1,0 +1,227 @@
+# choochoo-plugins build configuration
+# Defines per-backend metadata headers, placeholder values, and output paths.
+# Used by generate.py to transform source/ into backend-specific output.
+
+[plugin]
+name = "choochoo"
+version = "0.2.0"
+description = "Autonomous coding using the Ralph Wiggum technique - simple loops, persistent memory, one task at a time"
+author_name = "Malte Kliemann"
+author_url = "https://github.com/maltekliemann"
+repository = "https://github.com/maltekliemann/choochoo"
+keywords = ["autonomous", "coding", "ralph", "beads", "workflow"]
+
+# ─── Backend: Claude ─────────────────────────────────────────────────────────
+
+[claude]
+# Commands go to commands/{name}.md
+# Skills go to skills/{name}/SKILL.md
+# References go to docs/
+# Formulas go to formulas/
+# Plugin manifests go to .claude-plugin/
+
+[claude.headers.install]
+type = "command"
+description = "Install choochoo into the current project"
+
+[claude.headers.spec]
+type = "command"
+description = "Generate or refine a spec file for choochoo from your plan"
+argument-hint = "[source-file] [spec-name]"
+
+[claude.headers.pour]
+type = "command"
+description = "Create Ralph beads from ready tasks in a spec file or conversation context"
+argument-hint = "[target-tasks] [spec-file] [formula]"
+
+[claude.headers.ralph-guide]
+type = "skill"
+name = "Ralph Guide"
+description = "Guidance for customizing Ralph workflows, formulas, learning capture, and troubleshooting. Use for questions about Ralph loop, formulas, or running multiple Ralphs."
+
+[claude.headers.spec-generation]
+type = "skill"
+name = "Spec Generation"
+description = "Generate structured spec files for choochoo. Use when running /choochoo:spec or creating task breakdowns."
+
+[claude.placeholders]
+BACKEND_CHECK = """
+2. **Check Claude CLI**: Run `claude --version`
+   - If not installed: Warn user they'll need it to run Ralph
+"""
+RUNNER_INSTALL = """   ```
+   pip install "${CLAUDE_PLUGIN_ROOT}/../runner/"
+   ```
+   - This installs the `choochoo` CLI from the runner/ directory
+   - If `pip` is not available, try `pip3`
+   - If install fails, show the error and suggest the user check their Python environment
+"""
+FORMULA_COPY = """   ```
+   mkdir -p .beads/formulas
+   cp "${CLAUDE_PLUGIN_ROOT}/formulas/choochoo.formula.toml" .beads/formulas/
+   ```
+"""
+ASK_USER = "AskUserQuestion"
+
+[claude.placeholders.INVOKE]
+install = "/choochoo:install"
+spec = "/choochoo:spec"
+pour = "/choochoo:pour"
+spec-generation = "the /choochoo:spec-generation skill"
+
+[claude.placeholders.REFS]
+anthropic-spec-format = "references/anthropic-spec-format.md"
+
+[claude.references]
+# Maps source reference files to output paths for Claude
+# Claude puts all refs in docs/
+"spec-format.md" = "docs/spec-format.md"
+"commands.md" = "docs/commands.md"
+"customization.md" = "docs/customization.md"
+"formulas.md" = "docs/formulas.md"
+"troubleshooting.md" = "docs/troubleshooting.md"
+"workflow.md" = "docs/workflow.md"
+
+# ─── Backend: Cursor ─────────────────────────────────────────────────────────
+
+[cursor]
+# Everything is a skill in .cursor/skills/{name}/SKILL.md
+# References are co-located in skill directories
+
+[cursor.headers.install]
+type = "skill"
+name = "install"
+description = "Install choochoo into the current project"
+disable-model-invocation = true
+
+[cursor.headers.spec]
+type = "skill"
+name = "spec"
+description = "Generate or refine a spec file for choochoo from your plan"
+disable-model-invocation = true
+
+[cursor.headers.pour]
+type = "skill"
+name = "pour"
+description = "Create Ralph beads from ready tasks in a spec file or conversation context"
+disable-model-invocation = true
+
+[cursor.headers.ralph-guide]
+type = "skill"
+name = "Ralph Guide"
+description = "Guidance for customizing Ralph workflows, formulas, learning capture, and troubleshooting. Use for questions about Ralph loop, formulas, or running multiple Ralphs."
+
+[cursor.headers.spec-generation]
+type = "skill"
+name = "Spec Generation"
+description = "Generate structured spec files for choochoo. Use when running /choochoo:spec or creating task breakdowns."
+
+[cursor.placeholders]
+BACKEND_CHECK = """
+2. **Check Cursor**: Verify you are running in Cursor
+   - If not in Cursor: Warn user they'll need it to run Ralph
+"""
+RUNNER_INSTALL = """   ```bash
+   pip install runner/
+   ```
+   - This installs the `choochoo` CLI from the runner/ directory
+   - If `pip` is not available, try `pip3`
+   - If install fails, show the error and suggest the user check their Python environment
+"""
+FORMULA_COPY = """   ```bash
+   mkdir -p .beads/formulas
+   cp .cursor/skills/install/formulas/choochoo.formula.toml .beads/formulas/
+   ```
+"""
+ASK_USER = "AskUserQuestion"
+
+[cursor.placeholders.INVOKE]
+install = "the install skill"
+spec = "the spec skill"
+pour = "the pour skill"
+spec-generation = "the spec-generation skill"
+
+[cursor.placeholders.REFS]
+anthropic-spec-format = "references/anthropic-spec-format.md"
+
+[cursor.references]
+# Cursor co-locates refs in skill directories
+"spec-format.md" = ".cursor/skills/ralph-guide/references/spec-format.md"
+"commands.md" = ".cursor/skills/ralph-guide/references/commands.md"
+"customization.md" = ".cursor/skills/ralph-guide/references/customization.md"
+"formulas.md" = ".cursor/skills/ralph-guide/references/formulas.md"
+"troubleshooting.md" = ".cursor/skills/ralph-guide/references/troubleshooting.md"
+"workflow.md" = ".cursor/skills/ralph-guide/references/workflow.md"
+"anthropic-spec-format.md" = ".cursor/skills/spec-generation/references/anthropic-spec-format.md"
+
+# ─── Backend: Codex ──────────────────────────────────────────────────────────
+
+[codex]
+# Skills go to codex/skills/choochoo-codex-{name}/SKILL.md
+# Skill prefix for naming
+skill_prefix = "choochoo-codex-"
+
+[codex.headers.install]
+type = "skill"
+name = "choochoo-codex-install"
+description = "Install and initialize choochoo in a repository for Codex-driven workflows. Use when asked to set up prerequisites, formulas, or project bootstrap."
+
+[codex.headers.spec]
+type = "skill"
+name = "choochoo-codex-spec"
+description = "Generate or refine choochoo spec files from plans or conversation context. Use when asked to create, revise, or review .choochoo/*.spec.md."
+
+[codex.headers.pour]
+type = "skill"
+name = "choochoo-codex-pour"
+description = "Convert ready choochoo spec tasks into beads using formulas or singular tasks. Use when asked to pour specs into executable Ralph work."
+
+[codex.headers.ralph-guide]
+type = "skill"
+name = "choochoo-codex-ralph"
+output_name = "choochoo-codex-ralph"  # override: "ralph-guide" → "ralph"
+description = "Operate Ralph loops in Codex, including run, monitoring, retries, and manual recovery for blocked beads."
+
+[codex.headers.spec-generation]
+skip = true  # codex has no separate spec-generation skill; format rules are in spec's preamble
+
+[codex.placeholders]
+BACKEND_CHECK = ""
+RUNNER_INSTALL = """   ```bash
+   if ! command -v choochoo >/dev/null 2>&1; then
+     if [ -d ./runner ]; then
+       pip install ./runner
+     elif [ -n "${CHOOCHOO_RUNNER_PATH:-}" ]; then
+       pip install "${CHOOCHOO_RUNNER_PATH}"
+     else
+       echo "choochoo CLI not found and no runner path available"
+     fi
+   fi
+   ```
+   - If install fails, ask user for a runner source path and retry with `pip install <path>`
+"""
+FORMULA_COPY = """   ```bash
+   mkdir -p .beads/formulas
+   ```
+   Copy the bundled formula template:
+   ```bash
+   FORMULA_SRC="$(find "${CODEX_HOME:-$HOME/.codex}/skills/choochoo-codex-install" -type f -name 'choochoo.formula.toml' | head -n1)"
+   cp "${FORMULA_SRC}" .beads/formulas/choochoo.formula.toml
+   ```
+"""
+ASK_USER = "Ask user"
+
+[codex.placeholders.INVOKE]
+install = "the install skill"
+spec = "the spec skill"
+pour = "the pour skill"
+spec-generation = "references/spec-format.md"
+
+[codex.placeholders.REFS]
+anthropic-spec-format = "references/anthropic-spec-format.md"
+
+[codex.references]
+# Codex co-locates refs per skill
+"spec-format.md" = "codex/skills/choochoo-codex-spec/references/spec-format.md"
+"acceptance-dsl.md" = "codex/skills/choochoo-codex-pour/references/acceptance-dsl.md"
+"operations.md" = "codex/skills/choochoo-codex-ralph/references/operations.md"

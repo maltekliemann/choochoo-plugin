@@ -1,0 +1,17 @@
+{
+  "name": "choochoo",
+  "version": "0.2.0",
+  "description": "Autonomous coding using the Ralph Wiggum technique - simple loops, persistent memory, one task at a time",
+  "author": {
+    "name": "Malte Kliemann",
+    "url": "https://github.com/maltekliemann"
+  },
+  "repository": "https://github.com/maltekliemann/choochoo",
+  "keywords": [
+    "autonomous",
+    "coding",
+    "ralph",
+    "beads",
+    "workflow"
+  ]
+}
