@@ -32,15 +32,14 @@ CONFIG_PATH = ROOT / "config.toml"
 
 BACKENDS = ("claude", "cursor", "codex")
 
-# Source files and their "kind" (command or skill).
-# Commands: install, spec, pour
-# Skills: ralph-guide, spec-generation
-SOURCE_FILES: dict[str, str] = {
-    "install": "command",
-    "spec": "command",
-    "pour": "command",
-    "ralph-guide": "skill",
-    "spec-generation": "skill",
+# Source files: name → (kind, subdirectory).
+# Commands live in source/skills/, skills in source/references/.
+SOURCE_FILES: dict[str, tuple[str, str]] = {
+    "install": ("command", "skills"),
+    "spec": ("command", "skills"),
+    "pour": ("command", "skills"),
+    "ralph-guide": ("skill", "references"),
+    "spec-generation": ("skill", "references"),
 }
 
 
@@ -392,6 +391,7 @@ def collapse_blank_lines(text: str) -> str:
 def process_source(
     name: str,
     kind: str,
+    subdir: str,
     backend: str,
     cfg: dict,
 ) -> None:
@@ -402,7 +402,7 @@ def process_source(
         print(f"  {backend:8s}    (skipped)")
         return
 
-    src_path = SOURCE / f"{name}.md"
+    src_path = SOURCE / subdir / f"{name}.md"
     if not src_path.exists():
         print(f"  SKIP {name} (source not found)", file=sys.stderr)
         return
@@ -446,10 +446,10 @@ def main() -> None:
     print("choochoo-plugins: generating backend output\n")
 
     # Process each source file for each backend
-    for name, kind in SOURCE_FILES.items():
+    for name, (kind, subdir) in SOURCE_FILES.items():
         print(f"[{name}]")
         for backend in BACKENDS:
-            process_source(name, kind, backend, cfg)
+            process_source(name, kind, subdir, backend, cfg)
         print()
 
     # Distribute formulas

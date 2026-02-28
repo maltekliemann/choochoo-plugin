@@ -58,7 +58,7 @@ RUNNER_INSTALL = """   ```
 """
 FORMULA_COPY = """   ```
    mkdir -p .beads/formulas
-   cp "${CLAUDE_PLUGIN_ROOT}/formulas/choochoo.formula.toml" .beads/formulas/
+   cp "${CLAUDE_PLUGIN_ROOT}"/formulas/*.formula.toml .beads/formulas/
    ```
 """
 ASK_USER = "AskUserQuestion"
@@ -130,7 +130,7 @@ RUNNER_INSTALL = """   ```bash
 """
 FORMULA_COPY = """   ```bash
    mkdir -p .beads/formulas
-   cp .cursor/skills/install/formulas/choochoo.formula.toml .beads/formulas/
+   cp .cursor/skills/install/formulas/*.formula.toml .beads/formulas/
    ```
 """
 ASK_USER = "AskUserQuestion"
@@ -203,10 +203,10 @@ RUNNER_INSTALL = """   ```bash
 FORMULA_COPY = """   ```bash
    mkdir -p .beads/formulas
    ```
-   Copy the bundled formula template:
+   Copy all bundled formula files:
    ```bash
-   FORMULA_SRC="$(find "${CODEX_HOME:-$HOME/.codex}/skills/choochoo-codex-install" -type f -name 'choochoo.formula.toml' | head -n1)"
-   cp "${FORMULA_SRC}" .beads/formulas/choochoo.formula.toml
+   FORMULA_DIR="$(find "${CODEX_HOME:-$HOME/.codex}/skills/choochoo-codex-install" -type d -name 'assets' | head -n1)"
+   cp "${FORMULA_DIR}"/*.formula.toml .beads/formulas/
    ```
 """
 ASK_USER = "Ask user"

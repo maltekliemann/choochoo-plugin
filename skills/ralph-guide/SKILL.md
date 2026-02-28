@@ -333,7 +333,7 @@ bd update <bead-id> --status open     # Reopen when ready
 1. Move spec from archive: `mv .choochoo/archive/spec.md .choochoo/`
 2. Delete existing beads (IDs in spec's `poured` array)
 3. Clear `poured: []` in frontmatter
-4. Run /choochoo:pour
+4. Run `/choochoo:pour`
 
 **Session recovery (mid-task crash):**
 ```bash
