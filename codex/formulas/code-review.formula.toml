@@ -1,12 +1,12 @@
-# Code Review Formula
+# Code Review Convoy Formula
 #
-# A parallel formula that spawns multiple agents, each focusing on a
-# different review aspect. Results are collected and synthesized into
-# a unified review.
+# A convoy-style formula that spawns multiple polecats in parallel,
+# each focusing on a different review aspect. Results are collected
+# and synthesized into a unified review.
 #
 # Usage:
-#   bd mol pour code-review --var pr=123
-#   bd mol pour code-review --var files="src/*.go"
+#   gt formula run code-review --pr=123
+#   gt formula run code-review --files="src/*.go"
 
 description = """
 Comprehensive code review via parallel specialized reviewers.
@@ -36,8 +36,8 @@ collected and synthesized into a prioritized, actionable review.
 - **custom**: Select specific legs via --legs flag
 
 ## Execution Model
-1. Each leg spawns as a separate agent
-2. Agents work in parallel
+1. Each leg spawns as a separate polecat
+2. Polecats work in parallel
 3. Each writes findings to their designated output
 4. Synthesis step combines all findings into unified review
 """
@@ -63,12 +63,12 @@ type = "string"
 required_unless = ["pr", "files"]
 
 # Base prompt template - injected into all leg prompts
-# NOTE: Uses Go text/template syntax
+# NOTE: Uses Go text/template syntax (not Handlebars)
 [prompts]
 base = """
 # Code Review Assignment
 
-You are a specialized code reviewer participating in a parallel review.
+You are a specialized code reviewer participating in a convoy review.
 
 ## Context
 - **Formula**: {{.formula_name}}
@@ -131,7 +131,7 @@ directory = ".reviews/{{.review_id}}"
 leg_pattern = "{{.leg.id}}-findings.md"
 synthesis = "review-summary.md"
 
-# Leg definitions - each spawns a parallel agent
+# Leg definitions - each spawns a parallel polecat
 [[legs]]
 id = "correctness"
 title = "Correctness Review"

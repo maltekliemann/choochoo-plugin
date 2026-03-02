@@ -343,7 +343,7 @@ def generate_claude_manifests(cfg: dict) -> None:
                 "name": plugin_cfg.get("name", "choochoo"),
                 "source": {
                     "source": "github",
-                    "repo": "maltekliemann/choochoo-claude",
+                    "repo": "maltekliemann/choochoo-plugin",
                     "ref": "main",
                 },
                 **plugin_json,
